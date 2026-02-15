@@ -37,6 +37,7 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
         aestheticsScore: 5,
         datingIntention: 'Undecided',
         originDetails: '',
+        instagramUrl: '',
         profilePhotoUrl: '',
     })
 
@@ -104,6 +105,7 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
             aestheticsScore: 5,
             datingIntention: 'Undecided',
             originDetails: '',
+            instagramUrl: '',
             profilePhotoUrl: '',
         })
         setPhotoPreview(null)
@@ -347,6 +349,18 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                                 value={form.originDetails}
                                 onChange={e => setForm(f => ({ ...f, originDetails: e.target.value }))}
                                 placeholder="e.g. Matched on Tinder, met at a coffee shop"
+                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition"
+                            />
+                        </div>
+
+                        {/* Instagram Link */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">📸 Instagram Profile</label>
+                            <input
+                                type="url"
+                                value={form.instagramUrl}
+                                onChange={e => setForm(f => ({ ...f, instagramUrl: e.target.value }))}
+                                placeholder="https://instagram.com/username"
                                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition"
                             />
                         </div>

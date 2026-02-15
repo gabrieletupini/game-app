@@ -31,6 +31,7 @@ export interface Lead {
     datingIntention?: DatingIntention;
     funnelStage: FunnelStage;
     originDetails?: string; // Where/how met
+    instagramUrl?: string; // Instagram profile link
     temperature: Temperature;
     lastInteractionDate?: string; // ISO date string
     lastResponseDate?: string; // ISO date string — last INCOMING interaction
@@ -58,6 +59,7 @@ export interface CreateLeadInput {
     datingIntention?: DatingIntention;
     funnelStage?: FunnelStage;
     originDetails?: string;
+    instagramUrl?: string;
 }
 
 export interface UpdateLeadInput {
@@ -73,6 +75,7 @@ export interface UpdateLeadInput {
     aestheticsScore?: number;
     datingIntention?: DatingIntention;
     originDetails?: string;
+    instagramUrl?: string;
     temperature?: Temperature;
     lastInteractionDate?: string;
     lastResponseDate?: string;
