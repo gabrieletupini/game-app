@@ -177,11 +177,28 @@ export const useGameStore = create<GameStore>()(
 
             // Then hydrate from Firestore (async)
             firestoreService.loadAll().then(data => {
+                const incomingLeads = normalizeLeads(data.leads || []);
+                const incomingInteractions = data.interactions || [];
+
+                // Merge: keep local leads/interactions not yet in Firestore
+                const incomingLeadIds = new Set(incomingLeads.map(l => l.id));
+                const localOnlyLeads = get().leads.filter(l => !incomingLeadIds.has(l.id));
+                const mergedLeads = [...incomingLeads, ...localOnlyLeads];
+
+                const incomingIntIds = new Set(incomingInteractions.map(i => i.id));
+                const localOnlyInts = get().interactions.filter(i => !incomingIntIds.has(i.id));
+                const mergedInteractions = [...incomingInteractions, ...localOnlyInts];
+
                 set({
-                    leads: normalizeLeads(data.leads || []),
-                    interactions: data.interactions || [],
+                    leads: mergedLeads,
+                    interactions: mergedInteractions,
                     settings: data.settings || DEFAULT_SETTINGS,
                 });
+
+                // If we had local-only data, push it back to Firestore
+                if (localOnlyLeads.length > 0) firestoreService.saveLeads(mergedLeads);
+                if (localOnlyInts.length > 0) firestoreService.saveInteractions(mergedInteractions);
+
                 // Recalculate after Firestore hydration too
                 setTimeout(() => get().recalculateAllTemperatures(), 100);
             }).catch(err => {
@@ -190,11 +207,27 @@ export const useGameStore = create<GameStore>()(
 
             // Subscribe to real-time updates from other devices/tabs
             firestoreService.subscribeToChanges((data) => {
+                const incomingLeads = normalizeLeads(data.leads || []);
+                const incomingInteractions = data.interactions || [];
+
+                // Merge: keep local leads/interactions not yet in Firestore
+                const incomingLeadIds = new Set(incomingLeads.map(l => l.id));
+                const localOnlyLeads = get().leads.filter(l => !incomingLeadIds.has(l.id));
+                const mergedLeads = [...incomingLeads, ...localOnlyLeads];
+
+                const incomingIntIds = new Set(incomingInteractions.map(i => i.id));
+                const localOnlyInts = get().interactions.filter(i => !incomingIntIds.has(i.id));
+                const mergedInteractions = [...incomingInteractions, ...localOnlyInts];
+
                 set({
-                    leads: normalizeLeads(data.leads || []),
-                    interactions: data.interactions || [],
+                    leads: mergedLeads,
+                    interactions: mergedInteractions,
                     settings: data.settings || get().settings,
                 });
+
+                // Re-sync if we merged in local-only data
+                if (localOnlyLeads.length > 0) firestoreService.saveLeads(mergedLeads);
+                if (localOnlyInts.length > 0) firestoreService.saveInteractions(mergedInteractions);
             });
         },
 
