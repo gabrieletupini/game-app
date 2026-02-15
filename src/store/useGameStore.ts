@@ -20,6 +20,7 @@ import {
     ToastMessage
 } from '../types';
 import { localStorageService } from '../services/localStorage';
+import { firestoreService } from '../services/firestoreService';
 import { v4 as uuidv4 } from 'uuid';
 
 // Default settings
@@ -128,31 +129,42 @@ export const useGameStore = create<GameStore>()(
         error: { hasError: false },
         toasts: [],
 
-        // Load data from localStorage
+        // Load data from Firestore (falls back to localStorage if offline)
         loadData: () => {
-            try {
-                set({ loading: { isLoading: true, message: 'Loading data...' } });
+            set({ loading: { isLoading: true, message: 'Loading data...' } });
 
-                const leads = localStorageService.getLeads();
-                const interactions = localStorageService.getInteractions();
-                const settings = localStorageService.getSettings() || DEFAULT_SETTINGS;
+            // Load from localStorage immediately for fast startup
+            const cachedLeads = localStorageService.getLeads();
+            const cachedInteractions = localStorageService.getInteractions();
+            const cachedSettings = localStorageService.getSettings() || DEFAULT_SETTINGS;
 
+            set({
+                leads: cachedLeads,
+                interactions: cachedInteractions,
+                settings: cachedSettings,
+                loading: { isLoading: false },
+                error: { hasError: false }
+            });
+
+            // Then hydrate from Firestore (async)
+            firestoreService.loadAll().then(data => {
                 set({
-                    leads,
-                    interactions,
-                    settings,
-                    loading: { isLoading: false },
-                    error: { hasError: false }
+                    leads: data.leads || [],
+                    interactions: data.interactions || [],
+                    settings: data.settings || DEFAULT_SETTINGS,
                 });
-            } catch (error) {
+            }).catch(err => {
+                console.warn('Firestore hydration failed, using localStorage cache:', err);
+            });
+
+            // Subscribe to real-time updates from other devices/tabs
+            firestoreService.subscribeToChanges((data) => {
                 set({
-                    loading: { isLoading: false },
-                    error: {
-                        hasError: true,
-                        message: `Failed to load data: ${(error as Error).message}`
-                    }
+                    leads: data.leads || [],
+                    interactions: data.interactions || [],
+                    settings: data.settings || get().settings,
                 });
-            }
+            });
         },
 
         // Lead Actions
@@ -178,11 +190,9 @@ export const useGameStore = create<GameStore>()(
                     updatedAt: now
                 };
 
-                localStorageService.addLead(newLead);
-
-                set(state => ({
-                    leads: [...state.leads, newLead]
-                }));
+                const updatedLeads = [...get().leads, newLead];
+                set({ leads: updatedLeads });
+                firestoreService.saveLeads(updatedLeads);
 
                 get().addToast({
                     type: 'success',
@@ -205,13 +215,11 @@ export const useGameStore = create<GameStore>()(
                     updatedAt: new Date().toISOString()
                 };
 
-                localStorageService.updateLead(id, updatedData);
-
-                set(state => ({
-                    leads: state.leads.map(lead =>
-                        lead.id === id ? { ...lead, ...updatedData } : lead
-                    )
-                }));
+                const updatedLeads = get().leads.map(lead =>
+                    lead.id === id ? { ...lead, ...updatedData } : lead
+                );
+                set({ leads: updatedLeads });
+                firestoreService.saveLeads(updatedLeads);
             } catch (error) {
                 get().setError({
                     hasError: true,
@@ -222,12 +230,11 @@ export const useGameStore = create<GameStore>()(
 
         deleteLead: (id: string) => {
             try {
-                localStorageService.deleteLead(id);
-
-                set(state => ({
-                    leads: state.leads.filter(lead => lead.id !== id),
-                    interactions: state.interactions.filter(interaction => interaction.leadId !== id)
-                }));
+                const updatedLeads = get().leads.filter(lead => lead.id !== id);
+                const updatedInteractions = get().interactions.filter(interaction => interaction.leadId !== id);
+                set({ leads: updatedLeads, interactions: updatedInteractions });
+                firestoreService.saveLeads(updatedLeads);
+                firestoreService.saveInteractions(updatedInteractions);
 
                 get().addToast({
                     type: 'success',
@@ -250,13 +257,11 @@ export const useGameStore = create<GameStore>()(
                     stageEnteredAt: new Date().toISOString()
                 };
 
-                localStorageService.updateLead(id, updates);
-
-                set(state => ({
-                    leads: state.leads.map(lead =>
-                        lead.id === id ? { ...lead, ...updates } : lead
-                    )
-                }));
+                const updatedLeads = get().leads.map(lead =>
+                    lead.id === id ? { ...lead, ...updates } : lead
+                );
+                set({ leads: updatedLeads });
+                firestoreService.saveLeads(updatedLeads);
             } catch (error) {
                 get().setError({
                     hasError: true,
@@ -278,11 +283,9 @@ export const useGameStore = create<GameStore>()(
                     createdAt: new Date().toISOString()
                 };
 
-                localStorageService.addInteraction(newInteraction);
-
-                set(state => ({
-                    interactions: [...state.interactions, newInteraction]
-                }));
+                const updatedInteractions = [...get().interactions, newInteraction];
+                set({ interactions: updatedInteractions });
+                firestoreService.saveInteractions(updatedInteractions);
 
                 // Update lead's last interaction date and recalculate temperature
                 get().updateLead(input.leadId, {
@@ -299,13 +302,11 @@ export const useGameStore = create<GameStore>()(
 
         updateInteraction: (id: string, updates: Partial<Interaction>) => {
             try {
-                localStorageService.updateInteraction(id, updates);
-
-                set(state => ({
-                    interactions: state.interactions.map(interaction =>
-                        interaction.id === id ? { ...interaction, ...updates } : interaction
-                    )
-                }));
+                const updatedInteractions = get().interactions.map(interaction =>
+                    interaction.id === id ? { ...interaction, ...updates } : interaction
+                );
+                set({ interactions: updatedInteractions });
+                firestoreService.saveInteractions(updatedInteractions);
             } catch (error) {
                 get().setError({
                     hasError: true,
@@ -316,11 +317,9 @@ export const useGameStore = create<GameStore>()(
 
         deleteInteraction: (id: string) => {
             try {
-                localStorageService.deleteInteraction(id);
-
-                set(state => ({
-                    interactions: state.interactions.filter(interaction => interaction.id !== id)
-                }));
+                const updatedInteractions = get().interactions.filter(interaction => interaction.id !== id);
+                set({ interactions: updatedInteractions });
+                firestoreService.saveInteractions(updatedInteractions);
             } catch (error) {
                 get().setError({
                     hasError: true,
@@ -338,9 +337,8 @@ export const useGameStore = create<GameStore>()(
                     updatedAt: new Date().toISOString()
                 };
 
-                localStorageService.saveSettings(updatedSettings);
-
                 set({ settings: updatedSettings });
+                firestoreService.saveSettings(updatedSettings);
             } catch (error) {
                 get().setError({
                     hasError: true,
@@ -353,13 +351,13 @@ export const useGameStore = create<GameStore>()(
             try {
                 const resetSettings = {
                     ...DEFAULT_SETTINGS,
-                    user: get().settings.user, // Keep user info
-                    createdAt: get().settings.createdAt, // Keep original creation date
+                    user: get().settings.user,
+                    createdAt: get().settings.createdAt,
                     updatedAt: new Date().toISOString()
                 };
 
-                localStorageService.saveSettings(resetSettings);
                 set({ settings: resetSettings });
+                firestoreService.saveSettings(resetSettings);
             } catch (error) {
                 get().setError({
                     hasError: true,
@@ -543,12 +541,12 @@ export const useGameStore = create<GameStore>()(
 
         clearAllData: () => {
             try {
-                localStorageService.clearAllData();
                 set({
                     leads: [],
                     interactions: [],
                     settings: DEFAULT_SETTINGS
                 });
+                firestoreService.clearAll();
 
                 get().addToast({
                     type: 'success',
