@@ -4,6 +4,7 @@ import { useGameStore } from '../store/useGameStore'
 import type { Lead, DatingIntention } from '../types'
 import { FUNNEL_STAGE_NAMES, PLATFORM_ICONS, INTENTION_CONFIG } from '../utils/constants'
 import { getDaysSince } from '../utils/dateHelpers'
+import { getTemperaturePercent } from './TemperatureBoard'
 
 const ALL_INTENTIONS: (DatingIntention | 'All')[] = ['All', 'Short Term', 'Long Term', 'Long Term Open to Short', 'Casual', 'Exploring', 'Undecided']
 
@@ -16,7 +17,15 @@ const QUAL_RANGES: { key: QualRange; label: string; emoji: string; min: number; 
     { key: '9-10', label: 'Elite (9–10)', emoji: '👑', min: 9, max: 10, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
 ]
 
-type SortKey = 'name' | 'overall' | 'qualification' | 'aesthetics' | 'daysSince' | 'stage' | 'intention' | 'platform' | 'commPlatform'
+type TempRange = 'All' | 'hot' | 'warm' | 'cold'
+const TEMP_RANGES: { key: TempRange; label: string; emoji: string; min: number; max: number; color: string; bg: string; border: string }[] = [
+    { key: 'All', label: 'All', emoji: '🌡️', min: 0, max: 100, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-300' },
+    { key: 'hot', label: 'Hot (≥70%)', emoji: '🔥', min: 70, max: 100, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
+    { key: 'warm', label: 'Warm (35–69%)', emoji: '🌡️', min: 35, max: 69, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+    { key: 'cold', label: 'Cold (<35%)', emoji: '❄️', min: 0, max: 34, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+]
+
+type SortKey = 'name' | 'overall' | 'qualification' | 'aesthetics' | 'daysSince' | 'stage' | 'intention' | 'platform' | 'commPlatform' | 'temperature'
 type SortDir = 'asc' | 'desc'
 
 interface PriorityTableProps {
@@ -33,6 +42,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
 
     const [intentionFilter, setIntentionFilter] = useState<DatingIntention | 'All'>('All')
     const [qualFilter, setQualFilter] = useState<QualRange>('All')
+    const [tempFilter, setTempFilter] = useState<TempRange>('All')
     const [countryFilter, setCountryFilter] = useState<string>('All')
     const [traitFilter, setTraitFilter] = useState<string>('All')
     const [search, setSearch] = useState('')
@@ -67,7 +77,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
         }
     }
 
-    const activeFilters = (intentionFilter !== 'All' ? 1 : 0) + (qualFilter !== 'All' ? 1 : 0) + (countryFilter !== 'All' ? 1 : 0) + (traitFilter !== 'All' ? 1 : 0) + (search.trim() ? 1 : 0)
+    const activeFilters = (intentionFilter !== 'All' ? 1 : 0) + (qualFilter !== 'All' ? 1 : 0) + (tempFilter !== 'All' ? 1 : 0) + (countryFilter !== 'All' ? 1 : 0) + (traitFilter !== 'All' ? 1 : 0) + (search.trim() ? 1 : 0)
 
     const filteredAndSorted = useMemo(() => {
         let result = activeLeads
@@ -84,6 +94,17 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                 result = result.filter(l => {
                     const q = l.qualificationScore || 5
                     return q >= range.min && q <= range.max
+                })
+            }
+        }
+
+        // Filter by temperature range
+        if (tempFilter !== 'All') {
+            const range = TEMP_RANGES.find(r => r.key === tempFilter)
+            if (range) {
+                result = result.filter(l => {
+                    const pct = getTemperaturePercent(l)
+                    return pct >= range.min && pct <= range.max
                 })
             }
         }
@@ -143,13 +164,15 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                     return dir * a.platformOrigin.localeCompare(b.platformOrigin)
                 case 'commPlatform':
                     return dir * ((a.communicationPlatform?.[0] || a.platformOrigin).localeCompare(b.communicationPlatform?.[0] || b.platformOrigin))
+                case 'temperature':
+                    return dir * (getTemperaturePercent(a) - getTemperaturePercent(b))
                 default:
                     return 0
             }
         })
 
         return result
-    }, [activeLeads, intentionFilter, qualFilter, countryFilter, traitFilter, search, sortKey, sortDir])
+    }, [activeLeads, intentionFilter, qualFilter, tempFilter, countryFilter, traitFilter, search, sortKey, sortDir])
 
     if (activeLeads.length === 0) return null
 
@@ -176,14 +199,14 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                 <div>
                     <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                         <Filter className="w-5 h-5 text-brand-500" />
-                        Priority Board
+                        Lead Board
                     </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">Filter by intention, personality, country &amp; traits • Sort by any column • Click a row to open</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Filter by intention, temperature, personality, country &amp; traits • Sort by any column • Click a row to open</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {activeFilters > 0 && (
                         <button
-                            onClick={() => { setIntentionFilter('All'); setQualFilter('All'); setCountryFilter('All'); setTraitFilter('All'); setSearch('') }}
+                            onClick={() => { setIntentionFilter('All'); setQualFilter('All'); setTempFilter('All'); setCountryFilter('All'); setTraitFilter('All'); setSearch('') }}
                             className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition"
                         >
                             ✕ Clear {activeFilters} filter{activeFilters > 1 ? 's' : ''}
@@ -272,7 +295,46 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                 {/* Divider */}
                 <div className="border-t border-slate-100" />
 
-                {/* Row 3: Country filter */}
+                {/* Row 3: Temperature range filter */}
+                <div>
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">🌡️ Temperature Range</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {TEMP_RANGES.map(range => {
+                            const isActive = tempFilter === range.key
+                            const isAll = range.key === 'All'
+                            const count = isAll
+                                ? activeLeads.length
+                                : activeLeads.filter(l => {
+                                    const pct = getTemperaturePercent(l)
+                                    return pct >= range.min && pct <= range.max
+                                }).length
+
+                            return (
+                                <button
+                                    key={range.key}
+                                    onClick={() => setTempFilter(range.key)}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${isActive
+                                        ? isAll
+                                            ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                            : `${range.border} ${range.bg} ${range.color}`
+                                        : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'
+                                        }`}
+                                >
+                                    <span>{range.emoji}</span>
+                                    {range.label}
+                                    <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/60' : 'bg-slate-100'}`}>
+                                        {count}
+                                    </span>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100" />
+
+                {/* Row 4: Country filter */}
                 {allCountries.length > 0 && (
                     <>
                         <div>
@@ -304,7 +366,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                     </>
                 )}
 
-                {/* Row 4: Personality Trait keyword filter */}
+                {/* Row 5: Personality Trait keyword filter */}
                 {allTraits.length > 0 && (
                     <>
                         <div>
@@ -339,7 +401,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                     </>
                 )}
 
-                {/* Row 5: Search */}
+                {/* Row 6: Search */}
                 <div className="relative max-w-xs">
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
@@ -365,6 +427,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                 <SortHeader label="🧠 Pers" sortKeyName="qualification" />
                                 <SortHeader label="✨ Aesth" sortKeyName="aesthetics" />
                                 <SortHeader label="Stage" sortKeyName="stage" />
+                                <SortHeader label="🌡️ Temp" sortKeyName="temperature" />
                                 <SortHeader label="📍 Origin" sortKeyName="platform" />
                                 <SortHeader label="💬 Talking On" sortKeyName="commPlatform" />
                                 <SortHeader label="Last Contact" sortKeyName="daysSince" />
@@ -373,7 +436,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                         <tbody className="divide-y divide-slate-50">
                             {filteredAndSorted.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-400">
+                                    <td colSpan={11} className="px-4 py-8 text-center text-sm text-slate-400">
                                         No leads match your filters
                                     </td>
                                 </tr>
@@ -431,6 +494,18 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                                 <span className="text-xs font-medium text-slate-600">
                                                     {FUNNEL_STAGE_NAMES[lead.funnelStage] || lead.funnelStage}
                                                 </span>
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                {(() => {
+                                                    const pct = getTemperaturePercent(lead)
+                                                    const color = pct >= 70 ? 'text-red-500' : pct >= 35 ? 'text-amber-500' : 'text-blue-500'
+                                                    const emoji = pct >= 70 ? '🔥' : pct >= 35 ? '🌡️' : '❄️'
+                                                    return (
+                                                        <span className={`text-xs font-bold ${color}`}>
+                                                            {emoji} {pct}%
+                                                        </span>
+                                                    )
+                                                })()}
                                             </td>
                                             <td className="px-3 py-3 text-slate-600 whitespace-nowrap">
                                                 {platformIcon} {lead.platformOrigin}
