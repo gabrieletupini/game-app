@@ -24,6 +24,8 @@ const COLLECTIONS = {
 // We store everything in one document: { leads: [...], interactions: [...], settings: {...} }
 const DATA_DOC_REF = doc(db, COLLECTIONS.leads, USER_DOC)
 
+export type SyncStatus = 'connecting' | 'synced' | 'error' | 'offline'
+
 type AppData = {
     leads: Lead[]
     interactions: Interaction[]
@@ -36,6 +38,9 @@ class FirestoreService {
     private unsubscribe: Unsubscribe | null = null
     private onDataChange: ((data: AppData) => void) | null = null
     private isWriting = false // prevent echo from our own writes
+    private _syncStatus: SyncStatus = 'connecting'
+    private _lastError: string | null = null
+    private _onSyncStatusChange: ((status: SyncStatus, error?: string) => void) | null = null
 
     static getInstance(): FirestoreService {
         if (!this.instance) {
@@ -46,6 +51,19 @@ class FirestoreService {
 
     private constructor() { }
 
+    get syncStatus(): SyncStatus { return this._syncStatus }
+    get lastError(): string | null { return this._lastError }
+
+    onSyncStatusChange(callback: (status: SyncStatus, error?: string) => void): void {
+        this._onSyncStatusChange = callback
+    }
+
+    private setSyncStatus(status: SyncStatus, error?: string): void {
+        this._syncStatus = status
+        this._lastError = error || null
+        this._onSyncStatusChange?.(status, error)
+    }
+
     // Subscribe to real-time updates from Firestore
     subscribeToChanges(callback: (data: AppData) => void): Unsubscribe {
         this.onDataChange = callback
@@ -53,6 +71,9 @@ class FirestoreService {
         this.unsubscribe = onSnapshot(
             DATA_DOC_REF,
             (snapshot) => {
+                // Connection is working!
+                this.setSyncStatus('synced')
+
                 if (this.isWriting) return // skip echoes from our own writes
 
                 if (snapshot.exists()) {
@@ -68,7 +89,9 @@ class FirestoreService {
                 }
             },
             (error) => {
-                console.warn('Firestore subscription error, falling back to localStorage:', error)
+                const msg = error instanceof Error ? error.message : String(error)
+                console.error('🔴 Firestore subscription error:', msg)
+                this.setSyncStatus('error', msg)
             }
         )
 
@@ -84,8 +107,10 @@ class FirestoreService {
 
     // Load all data — tries Firestore first, falls back to localStorage
     async loadAll(): Promise<AppData> {
+        this.setSyncStatus('connecting')
         try {
             const snapshot = await getDoc(DATA_DOC_REF)
+            this.setSyncStatus('synced')
 
             if (snapshot.exists()) {
                 const data = snapshot.data() as AppData
@@ -111,7 +136,9 @@ class FirestoreService {
 
             return localData
         } catch (error) {
-            console.warn('Firestore load failed, falling back to localStorage:', error)
+            const msg = error instanceof Error ? error.message : String(error)
+            console.error('🔴 Firestore load failed:', msg)
+            this.setSyncStatus('error', msg)
             return {
                 leads: localStorageService.getLeads(),
                 interactions: localStorageService.getInteractions(),
@@ -135,8 +162,11 @@ class FirestoreService {
         try {
             this.isWriting = true
             await setDoc(DATA_DOC_REF, payload, { merge: true })
+            this.setSyncStatus('synced')
         } catch (error) {
-            console.warn('Firestore save failed (data is safe in localStorage):', error)
+            const msg = error instanceof Error ? error.message : String(error)
+            console.error('🔴 Firestore save failed:', msg)
+            this.setSyncStatus('error', msg)
         } finally {
             this.isWriting = false
         }
@@ -148,8 +178,11 @@ class FirestoreService {
         try {
             this.isWriting = true
             await setDoc(DATA_DOC_REF, { leads, updatedAt: new Date().toISOString() }, { merge: true })
+            this.setSyncStatus('synced')
         } catch (error) {
-            console.warn('Firestore saveLeads failed:', error)
+            const msg = error instanceof Error ? error.message : String(error)
+            console.error('🔴 Firestore saveLeads failed:', msg)
+            this.setSyncStatus('error', msg)
         } finally {
             this.isWriting = false
         }
@@ -161,8 +194,11 @@ class FirestoreService {
         try {
             this.isWriting = true
             await setDoc(DATA_DOC_REF, { interactions, updatedAt: new Date().toISOString() }, { merge: true })
+            this.setSyncStatus('synced')
         } catch (error) {
-            console.warn('Firestore saveInteractions failed:', error)
+            const msg = error instanceof Error ? error.message : String(error)
+            console.error('🔴 Firestore saveInteractions failed:', msg)
+            this.setSyncStatus('error', msg)
         } finally {
             this.isWriting = false
         }
@@ -174,8 +210,11 @@ class FirestoreService {
         try {
             this.isWriting = true
             await setDoc(DATA_DOC_REF, { settings, updatedAt: new Date().toISOString() }, { merge: true })
+            this.setSyncStatus('synced')
         } catch (error) {
-            console.warn('Firestore saveSettings failed:', error)
+            const msg = error instanceof Error ? error.message : String(error)
+            console.error('🔴 Firestore saveSettings failed:', msg)
+            this.setSyncStatus('error', msg)
         } finally {
             this.isWriting = false
         }

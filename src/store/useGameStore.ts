@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { localStorageService } from '../services/localStorage';
 import { firestoreService } from '../services/firestoreService';
+import type { SyncStatus } from '../services/firestoreService';
 import { v4 as uuidv4 } from 'uuid';
 
 // Migrate old data: convert communicationPlatform from string to array
@@ -94,6 +95,8 @@ interface GameStore {
     loading: LoadingState;
     error: ErrorState;
     toasts: ToastMessage[];
+    syncStatus: SyncStatus;
+    syncError: string | null;
 
     // Lead Actions
     loadData: () => void;
@@ -144,10 +147,17 @@ export const useGameStore = create<GameStore>()(
         loading: { isLoading: false },
         error: { hasError: false },
         toasts: [],
+        syncStatus: 'connecting' as SyncStatus,
+        syncError: null as string | null,
 
         // Load data from Firestore (falls back to localStorage if offline)
         loadData: () => {
             set({ loading: { isLoading: true, message: 'Loading data...' } });
+
+            // Wire up sync status tracking
+            firestoreService.onSyncStatusChange((status, error) => {
+                set({ syncStatus: status, syncError: error || null });
+            });
 
             // Load from localStorage immediately for fast startup
             const cachedLeads = localStorageService.getLeads();

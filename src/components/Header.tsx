@@ -1,5 +1,7 @@
 import { Plus, LayoutGrid, Heart as HeartIcon, Skull, BarChart3, Menu, X, Upload, Download, ClipboardCheck } from 'lucide-react'
 import { useState } from 'react'
+import { useGameStore } from '../store/useGameStore'
+import type { SyncStatus } from '../services/firestoreService'
 
 function DateFlowLogo({ className = 'w-9 h-9' }: { className?: string }) {
     return (
@@ -18,6 +20,33 @@ function DateFlowLogo({ className = 'w-9 h-9' }: { className?: string }) {
             <rect width="32" height="32" rx="8" fill="url(#logoBg)" />
             <path d="M16 25.6s-7.2-5.4-9-8.4c-1.2-2-.6-4.8 1.4-6 2-1.2 4.2-.4 5.6 1.2l2 2.4 2-2.4c1.4-1.6 3.6-2.4 5.6-1.2 2 1.2 2.6 4 1.4 6-1.8 3-9 8.4-9 8.4z" fill="url(#logoHeart)" opacity="0.95" />
         </svg>
+    )
+}
+
+function SyncIndicator() {
+    const syncStatus = useGameStore(state => state.syncStatus)
+    const syncError = useGameStore(state => state.syncError)
+    const [showTooltip, setShowTooltip] = useState(false)
+
+    const config: Record<SyncStatus, { color: string; pulse: boolean; label: string }> = {
+        connecting: { color: 'bg-amber-400', pulse: true, label: 'Connecting to cloud...' },
+        synced: { color: 'bg-emerald-400', pulse: false, label: 'Synced — data is saved to cloud' },
+        error: { color: 'bg-red-500', pulse: true, label: syncError ? `Sync error: ${syncError}` : 'Sync error — data only saved locally' },
+        offline: { color: 'bg-slate-400', pulse: false, label: 'Offline — data saved locally' },
+    }
+
+    const { color, pulse, label } = config[syncStatus]
+
+    return (
+        <div className="relative" onMouseEnter={() => setShowTooltip(true)} onMouseLeave={() => setShowTooltip(false)}>
+            <div className={`w-2.5 h-2.5 rounded-full ${color} ${pulse ? 'animate-pulse' : ''} cursor-help`} />
+            {showTooltip && (
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-lg">
+                    {label}
+                    <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-slate-800 rotate-45" />
+                </div>
+            )}
+        </div>
     )
 }
 
@@ -50,9 +79,12 @@ export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload
                     <div className="flex items-center gap-3">
                         <DateFlowLogo className="w-9 h-9 drop-shadow-md" />
                         <div>
-                            <h1 className="text-lg font-extrabold leading-tight">
-                                <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">DateFlow</span>
-                            </h1>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-lg font-extrabold leading-tight">
+                                    <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">DateFlow</span>
+                                </h1>
+                                <SyncIndicator />
+                            </div>
                             <p className="text-[11px] text-slate-400 leading-none hidden sm:block">Your Dating Pipeline</p>
                         </div>
                     </div>
