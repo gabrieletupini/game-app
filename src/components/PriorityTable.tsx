@@ -33,9 +33,30 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
 
     const [intentionFilter, setIntentionFilter] = useState<DatingIntention | 'All'>('All')
     const [qualFilter, setQualFilter] = useState<QualRange>('All')
+    const [countryFilter, setCountryFilter] = useState<string>('All')
+    const [traitFilter, setTraitFilter] = useState<string>('All')
     const [search, setSearch] = useState('')
     const [sortKey, setSortKey] = useState<SortKey>('overall')
     const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+    // Collect unique countries and trait keywords from all active leads
+    const allCountries = useMemo(() => {
+        const set = new Set<string>()
+        activeLeads.forEach(l => {
+            if (l.countryOrigin?.trim()) set.add(l.countryOrigin.trim())
+        })
+        return Array.from(set).sort()
+    }, [activeLeads])
+
+    const allTraits = useMemo(() => {
+        const set = new Set<string>()
+        activeLeads.forEach(l => {
+            if (l.personalityTraits) {
+                l.personalityTraits.split(',').map(t => t.trim()).filter(Boolean).forEach(t => set.add(t))
+            }
+        })
+        return Array.from(set).sort()
+    }, [activeLeads])
 
     const handleSort = (key: SortKey) => {
         if (sortKey === key) {
@@ -46,7 +67,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
         }
     }
 
-    const activeFilters = (intentionFilter !== 'All' ? 1 : 0) + (qualFilter !== 'All' ? 1 : 0) + (search.trim() ? 1 : 0)
+    const activeFilters = (intentionFilter !== 'All' ? 1 : 0) + (qualFilter !== 'All' ? 1 : 0) + (countryFilter !== 'All' ? 1 : 0) + (traitFilter !== 'All' ? 1 : 0) + (search.trim() ? 1 : 0)
 
     const filteredAndSorted = useMemo(() => {
         let result = activeLeads
@@ -65,6 +86,19 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                     return q >= range.min && q <= range.max
                 })
             }
+        }
+
+        // Filter by country
+        if (countryFilter !== 'All') {
+            result = result.filter(l => (l.countryOrigin || '').trim() === countryFilter)
+        }
+
+        // Filter by personality trait keyword
+        if (traitFilter !== 'All') {
+            result = result.filter(l => {
+                const traits = (l.personalityTraits || '').split(',').map(t => t.trim().toLowerCase())
+                return traits.includes(traitFilter.toLowerCase())
+            })
         }
 
         // Filter by search
@@ -115,7 +149,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
         })
 
         return result
-    }, [activeLeads, intentionFilter, qualFilter, search, sortKey, sortDir])
+    }, [activeLeads, intentionFilter, qualFilter, countryFilter, traitFilter, search, sortKey, sortDir])
 
     if (activeLeads.length === 0) return null
 
@@ -144,12 +178,12 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                         <Filter className="w-5 h-5 text-brand-500" />
                         Priority Board
                     </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">Filter by intention &amp; personality • Sort by any column • Click a row to open</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Filter by intention, personality, country &amp; traits • Sort by any column • Click a row to open</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {activeFilters > 0 && (
                         <button
-                            onClick={() => { setIntentionFilter('All'); setQualFilter('All'); setSearch('') }}
+                            onClick={() => { setIntentionFilter('All'); setQualFilter('All'); setCountryFilter('All'); setTraitFilter('All'); setSearch('') }}
                             className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition"
                         >
                             ✕ Clear {activeFilters} filter{activeFilters > 1 ? 's' : ''}
@@ -238,7 +272,74 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                 {/* Divider */}
                 <div className="border-t border-slate-100" />
 
-                {/* Row 3: Search */}
+                {/* Row 3: Country filter */}
+                {allCountries.length > 0 && (
+                    <>
+                        <div>
+                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">🌍 Country</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    onClick={() => setCountryFilter('All')}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${countryFilter === 'All' ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}
+                                >
+                                    All
+                                    <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${countryFilter === 'All' ? 'bg-white/60' : 'bg-slate-100'}`}>{activeLeads.length}</span>
+                                </button>
+                                {allCountries.map(country => {
+                                    const count = activeLeads.filter(l => (l.countryOrigin || '').trim() === country).length
+                                    return (
+                                        <button
+                                            key={country}
+                                            onClick={() => setCountryFilter(country)}
+                                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${countryFilter === country ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}
+                                        >
+                                            🌍 {country}
+                                            <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${countryFilter === country ? 'bg-white/60' : 'bg-slate-100'}`}>{count}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                        <div className="border-t border-slate-100" />
+                    </>
+                )}
+
+                {/* Row 4: Personality Trait keyword filter */}
+                {allTraits.length > 0 && (
+                    <>
+                        <div>
+                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">💫 Personality Trait</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    onClick={() => setTraitFilter('All')}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${traitFilter === 'All' ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}
+                                >
+                                    All
+                                    <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${traitFilter === 'All' ? 'bg-white/60' : 'bg-slate-100'}`}>{activeLeads.length}</span>
+                                </button>
+                                {allTraits.map(trait => {
+                                    const count = activeLeads.filter(l => {
+                                        const traits = (l.personalityTraits || '').split(',').map(t => t.trim().toLowerCase())
+                                        return traits.includes(trait.toLowerCase())
+                                    }).length
+                                    return (
+                                        <button
+                                            key={trait}
+                                            onClick={() => setTraitFilter(trait)}
+                                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${traitFilter === trait ? 'border-pink-400 bg-pink-50 text-pink-700' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}
+                                        >
+                                            💫 {trait}
+                                            <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${traitFilter === trait ? 'bg-white/60' : 'bg-slate-100'}`}>{count}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                        <div className="border-t border-slate-100" />
+                    </>
+                )}
+
+                {/* Row 5: Search */}
                 <div className="relative max-w-xs">
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input

@@ -411,10 +411,12 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                         </div>
                                         <div>
                                             <label className="text-xs font-medium text-slate-500">Personality Traits</label>
+                                            <p className="text-[10px] text-slate-400 mt-0.5">Comma-separated keywords</p>
                                             <input
                                                 type="text"
                                                 value={editForm.personalityTraits}
                                                 onChange={e => setEditForm(f => ({ ...f, personalityTraits: e.target.value }))}
+                                                placeholder="e.g. Liberal, Joyful, Creative"
                                                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
                                             />
                                         </div>
@@ -509,7 +511,17 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                         {/* Personality */}
                                         <div>
                                             <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Personality Traits</h4>
-                                            <p className="text-sm text-slate-700 mt-1">{lead.personalityTraits || <span className="text-slate-400 italic">Not set</span>}</p>
+                                            {lead.personalityTraits ? (
+                                                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                                    {lead.personalityTraits.split(',').map(t => t.trim()).filter(Boolean).map(trait => (
+                                                        <span key={trait} className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg bg-pink-50 text-pink-700 border border-pink-200">
+                                                            💫 {trait}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-slate-400 italic mt-1">Not set</p>
+                                            )}
                                         </div>
 
                                         {/* How you met */}

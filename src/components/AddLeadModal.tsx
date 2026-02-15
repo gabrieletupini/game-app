@@ -328,12 +328,13 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
 
                         {/* Personality Traits */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Personality Traits</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Personality Traits</label>
+                            <p className="text-[11px] text-slate-400 mb-1.5">Comma-separated keywords (used for filtering)</p>
                             <input
                                 type="text"
                                 value={form.personalityTraits}
                                 onChange={e => setForm(f => ({ ...f, personalityTraits: e.target.value }))}
-                                placeholder="e.g. Outgoing, creative, loves hiking"
+                                placeholder="e.g. Liberal, Joyful, Creative, Ambitious"
                                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition"
                             />
                         </div>
