@@ -1,20 +1,25 @@
-// Authentication context — Firebase Auth with email/password
+// Authentication context — Firebase Auth with email/password + Google SSO
 // Currently single-user (admin), structured for future multi-user support
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import {
     signInWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
     signOut,
     onAuthStateChanged,
     type User,
 } from 'firebase/auth'
 import { auth } from '../services/firebase'
 
+const googleProvider = new GoogleAuthProvider()
+
 interface AuthContextType {
     user: User | null
     loading: boolean
     error: string | null
     login: (email: string, password: string) => Promise<void>
+    loginWithGoogle: () => Promise<void>
     logout: () => Promise<void>
 }
 
@@ -58,12 +63,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
+    const loginWithGoogle = async () => {
+        setError(null)
+        try {
+            await signInWithPopup(auth, googleProvider)
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Google sign-in failed'
+            if (msg.includes('popup-closed-by-user')) {
+                // User closed the popup — not an error
+                return
+            } else if (msg.includes('account-exists-with-different-credential')) {
+                setError('An account already exists with this email')
+            } else {
+                setError(msg)
+            }
+            throw err
+        }
+    }
+
     const logout = async () => {
         await signOut(auth)
     }
 
     return (
-        <AuthContext.Provider value={{ user, loading, error, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, error, login, loginWithGoogle, logout }}>
             {children}
         </AuthContext.Provider>
     )
