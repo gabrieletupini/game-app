@@ -61,7 +61,8 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
         return {
             'ID': lead.id,
             'Name': lead.name,
-            'Platform': lead.platformOrigin,
+            'Origin Platform': lead.platformOrigin,
+            'Communication Platform': lead.communicationPlatform || lead.platformOrigin,
             'Country': lead.countryOrigin || '',
             'Personality Traits': lead.personalityTraits || '',
             'Notes': lead.notes || '',
@@ -87,7 +88,8 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
     ws['!cols'] = [
         { wch: 38 },  // ID
         { wch: 22 },  // Name
-        { wch: 14 },  // Platform
+        { wch: 18 },  // Origin Platform
+        { wch: 22 },  // Communication Platform
         { wch: 16 },  // Country
         { wch: 30 },  // Personality
         { wch: 30 },  // Notes
@@ -111,7 +113,8 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
     const templateRows = [
         {
             'Name': 'Jane Doe',
-            'Platform': 'Tinder',
+            'Origin Platform': 'Tinder',
+            'Communication Platform': 'WhatsApp',
             'Country': 'USA',
             'Personality Traits': 'Outgoing, loves hiking',
             'Notes': 'Met at coffee shop',
@@ -123,7 +126,7 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
     ]
     const templateWs = XLSX.utils.json_to_sheet(templateRows)
     templateWs['!cols'] = [
-        { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 30 },
+        { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 16 }, { wch: 30 },
         { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 30 },
     ]
     XLSX.utils.book_append_sheet(wb, templateWs, 'Import Template')
@@ -144,7 +147,8 @@ export function downloadImportTemplate() {
     const templateRows = [
         {
             'Name': 'Jane Doe',
-            'Platform': 'Tinder',
+            'Origin Platform': 'Tinder',
+            'Communication Platform': 'WhatsApp',
             'Country': 'USA',
             'Personality Traits': 'Outgoing, loves hiking',
             'Notes': 'Met through mutual friend',
@@ -156,7 +160,8 @@ export function downloadImportTemplate() {
         },
         {
             'Name': 'Maria Garcia',
-            'Platform': 'Instagram',
+            'Origin Platform': 'Instagram',
+            'Communication Platform': 'Instagram',
             'Country': 'Spain',
             'Personality Traits': 'Creative, photographer',
             'Notes': 'DM conversation about travel',
@@ -168,7 +173,8 @@ export function downloadImportTemplate() {
         },
         {
             'Name': 'Sofia Rossi',
-            'Platform': 'Bumble',
+            'Origin Platform': 'Bumble',
+            'Communication Platform': 'WhatsApp',
             'Country': 'Italy',
             'Personality Traits': 'Chill, foodie',
             'Notes': 'Had coffee last week',
@@ -180,7 +186,8 @@ export function downloadImportTemplate() {
         },
         {
             'Name': 'Emma Wilson',
-            'Platform': 'Offline',
+            'Origin Platform': 'Offline',
+            'Communication Platform': 'WhatsApp',
             'Country': 'UK',
             'Personality Traits': 'Ambitious, witty',
             'Notes': 'Strong connection, seeing regularly',
@@ -192,7 +199,8 @@ export function downloadImportTemplate() {
         },
         {
             'Name': 'Ana Costa',
-            'Platform': 'WhatsApp',
+            'Origin Platform': 'Hinge',
+            'Communication Platform': 'WhatsApp',
             'Country': 'Brazil',
             'Personality Traits': 'Fun, spontaneous',
             'Notes': 'Together for 3 months',
@@ -204,7 +212,8 @@ export function downloadImportTemplate() {
         },
         {
             'Name': 'Lisa Chen',
-            'Platform': 'Facebook',
+            'Origin Platform': 'Facebook',
+            'Communication Platform': 'Facebook',
             'Country': 'Canada',
             'Personality Traits': 'Quiet, bookworm',
             'Notes': 'Stopped replying after 2nd date',
@@ -219,7 +228,8 @@ export function downloadImportTemplate() {
     const ws = XLSX.utils.json_to_sheet(templateRows)
     ws['!cols'] = [
         { wch: 22 }, // Name
-        { wch: 14 }, // Platform
+        { wch: 18 }, // Origin Platform
+        { wch: 22 }, // Communication Platform
         { wch: 16 }, // Country
         { wch: 30 }, // Personality Traits
         { wch: 30 }, // Notes
@@ -233,15 +243,16 @@ export function downloadImportTemplate() {
     // Header comments — hover any header to see instructions
     const headerComments: Record<string, string> = {
         'A1': '✏️ FREE TEXT — Type any name',
-        'B1': `🔘 SELECT ONE:\n${VALID_PLATFORMS.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nDefault: Other`,
-        'C1': '✏️ FREE TEXT — Any country name',
-        'D1': '✏️ FREE TEXT — Comma-separated personality traits',
-        'E1': '✏️ FREE TEXT — Any notes you want to remember',
-        'F1': '🔢 NUMBER 1-10 — Personality/vibe score (default: 5)',
-        'G1': '🔢 NUMBER 1-10 — Physical attraction score (default: 5)',
-        'H1': `🔘 SELECT ONE:\n${VALID_INTENTIONS.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}\n\nDefault: Undecided`,
-        'I1': `🔘 SELECT ONE:\n${FRIENDLY_STAGES.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nDefault: Initial Contact`,
-        'J1': '✏️ FREE TEXT — How/where you met this person',
+        'B1': `📍 SELECT ONE — Where she comes from:\n${VALID_PLATFORMS.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nDefault: Other`,
+        'C1': `💬 SELECT ONE — Where you're talking now:\n${VALID_PLATFORMS.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nDefault: same as Origin`,
+        'D1': '✏️ FREE TEXT — Any country name',
+        'E1': '✏️ FREE TEXT — Comma-separated personality traits',
+        'F1': '✏️ FREE TEXT — Any notes you want to remember',
+        'G1': '🔢 NUMBER 1-10 — Personality/vibe score (default: 5)',
+        'H1': '🔢 NUMBER 1-10 — Physical attraction score (default: 5)',
+        'I1': `🔘 SELECT ONE:\n${VALID_INTENTIONS.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}\n\nDefault: Undecided`,
+        'J1': `🔘 SELECT ONE:\n${FRIENDLY_STAGES.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nDefault: Initial Contact`,
+        'K1': '✏️ FREE TEXT — How/where you met this person',
     }
     for (const [cell, text] of Object.entries(headerComments)) {
         if (!ws[cell]) continue
@@ -253,7 +264,8 @@ export function downloadImportTemplate() {
     // ────────────────────────────────────────
     const helpRows = [
         { Field: 'Name', 'Input Type': '✏️ FREE TEXT', Required: 'Yes', Description: 'Name of the person', 'Valid Options / Format': 'Any text' },
-        { Field: 'Platform', 'Input Type': '🔘 SELECT', Required: 'No', Description: 'Where you found/met her', 'Valid Options / Format': VALID_PLATFORMS.join(', ') },
+        { Field: 'Origin Platform', 'Input Type': '🔘 SELECT', Required: 'No', Description: 'Where you found/met her', 'Valid Options / Format': VALID_PLATFORMS.join(', ') },
+        { Field: 'Communication Platform', 'Input Type': '🔘 SELECT', Required: 'No', Description: 'Where you\'re currently talking', 'Valid Options / Format': VALID_PLATFORMS.join(', ') + ' (defaults to Origin Platform)' },
         { Field: 'Country', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Country of origin', 'Valid Options / Format': 'Any text (e.g. Italy, USA, Brazil)' },
         { Field: 'Personality Traits', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Comma-separated personality traits', 'Valid Options / Format': 'Any text (e.g. "Funny, smart, outgoing")' },
         { Field: 'Notes', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Any notes to remember about her', 'Valid Options / Format': 'Any text' },
@@ -326,6 +338,7 @@ export function downloadImportTemplate() {
 export interface ParsedLead {
     name: string
     platformOrigin: PlatformOrigin
+    communicationPlatform: PlatformOrigin
     countryOrigin: string
     personalityTraits: string
     notes: string
@@ -427,11 +440,16 @@ export function parseExcelFile(file: File): Promise<ParseResult> {
                         errors.push(`Row ${rowNum}: Name is required`)
                     }
 
+                    const parsedOriginPlatform = parsePlatform(
+                        row['Origin Platform'] ?? row['origin platform'] ?? row['Platform'] ?? row['platform'] ?? row['PLATFORM'] ?? row['Platform Origin'] ?? ''
+                    )
+
                     const lead: ParsedLead = {
                         name,
-                        platformOrigin: parsePlatform(
-                            row['Platform'] ?? row['platform'] ?? row['PLATFORM'] ?? row['Platform Origin'] ?? ''
-                        ),
+                        platformOrigin: parsedOriginPlatform,
+                        communicationPlatform: parsePlatform(
+                            row['Communication Platform'] ?? row['communication platform'] ?? row['Comm Platform'] ?? row['Talking On'] ?? ''
+                        ) || parsedOriginPlatform,
                         countryOrigin: normalizeString(
                             row['Country'] ?? row['country'] ?? row['COUNTRY'] ?? row['Country Origin'] ?? ''
                         ),
@@ -491,6 +509,7 @@ export function parsedLeadsToCreateInputs(parsed: ParsedLead[]): CreateLeadInput
         .map(l => ({
             name: l.name,
             platformOrigin: l.platformOrigin,
+            communicationPlatform: l.communicationPlatform || l.platformOrigin,
             countryOrigin: l.countryOrigin || undefined,
             personalityTraits: l.personalityTraits || undefined,
             notes: l.notes || undefined,

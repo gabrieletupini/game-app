@@ -107,6 +107,8 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
         : getDaysSince(lead.createdAt)
 
     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
+    const commPlatform = lead.communicationPlatform || lead.platformOrigin
+    const commIcon = PLATFORM_ICONS[commPlatform] || '📱'
 
     return (
         <div
@@ -176,8 +178,16 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
                     </div>
 
                     <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-500" title={`Origin: ${lead.platformOrigin}`}>
+                            📍{platformIcon}
+                        </span>
+                        {commPlatform !== lead.platformOrigin && (
+                            <span className="text-xs text-slate-500" title={`Talking on: ${commPlatform}`}>
+                                💬{commIcon}
+                            </span>
+                        )}
                         <span className="text-xs text-slate-500">
-                            {platformIcon} {lead.platformOrigin}
+                            {lead.platformOrigin}{commPlatform !== lead.platformOrigin ? ` → ${commPlatform}` : ''}
                         </span>
                         {lead.countryOrigin && (
                             <span className="text-xs text-slate-400">• {lead.countryOrigin}</span>
@@ -210,6 +220,8 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
         : getDaysSince(lead.createdAt)
 
     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
+    const commPlatform = lead.communicationPlatform || lead.platformOrigin
+    const commIcon = PLATFORM_ICONS[commPlatform] || '📱'
 
     return (
         <div
@@ -237,7 +249,8 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
                         </span>
                     </div>
                     <p className="text-sm text-slate-500 mt-0.5">
-                        {platformIcon} {lead.platformOrigin}
+                        📍{platformIcon} {lead.platformOrigin}
+                        {commPlatform !== lead.platformOrigin && ` → 💬${commIcon} ${commPlatform}`}
                         {lead.countryOrigin && ` • ${lead.countryOrigin}`}
                     </p>
                     <div className="flex items-center justify-between mt-2">

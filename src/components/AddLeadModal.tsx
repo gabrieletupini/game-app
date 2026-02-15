@@ -10,7 +10,7 @@ interface AddLeadModalProps {
     onClose: () => void
 }
 
-const PLATFORMS: PlatformOrigin[] = ['Tinder', 'Bumble', 'Instagram', 'Facebook', 'WhatsApp', 'Offline', 'Other']
+const PLATFORMS: PlatformOrigin[] = ['Tinder', 'Bumble', 'Hinge', 'Instagram', 'Facebook', 'WhatsApp', 'Offline', 'Other']
 const PLATFORM_EMOJIS: Record<PlatformOrigin, string> = {
     Tinder: '🔥',
     Bumble: '💛',
@@ -29,6 +29,7 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
     const [form, setForm] = useState<CreateLeadInput>({
         name: '',
         platformOrigin: 'Tinder',
+        communicationPlatform: 'WhatsApp',
         countryOrigin: '',
         personalityTraits: '',
         notes: '',
@@ -80,6 +81,7 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
         setForm({
             name: '',
             platformOrigin: 'Tinder',
+            communicationPlatform: 'WhatsApp',
             countryOrigin: '',
             personalityTraits: '',
             notes: '',
@@ -168,9 +170,10 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                             />
                         </div>
 
-                        {/* Platform */}
+                        {/* Origin Platform */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Platform</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">📍 Origin Platform</label>
+                            <p className="text-[11px] text-slate-400 mb-2">Where did you find her?</p>
                             <div className="grid grid-cols-4 gap-2">
                                 {PLATFORMS.map(platform => (
                                     <button
@@ -179,6 +182,28 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                                         onClick={() => setForm(f => ({ ...f, platformOrigin: platform }))}
                                         className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${form.platformOrigin === platform
                                             ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                                            }`}
+                                    >
+                                        <span className="text-lg">{PLATFORM_EMOJIS[platform]}</span>
+                                        {platform}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Communication Platform */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">💬 Communication Platform</label>
+                            <p className="text-[11px] text-slate-400 mb-2">Where are you talking now?</p>
+                            <div className="grid grid-cols-4 gap-2">
+                                {PLATFORMS.map(platform => (
+                                    <button
+                                        key={platform}
+                                        type="button"
+                                        onClick={() => setForm(f => ({ ...f, communicationPlatform: platform }))}
+                                        className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${form.communicationPlatform === platform
+                                            ? 'border-purple-500 bg-purple-50 text-purple-700'
                                             : 'border-slate-200 text-slate-600 hover:border-slate-300'
                                             }`}
                                     >
@@ -266,8 +291,8 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                                             type="button"
                                             onClick={() => setForm(f => ({ ...f, datingIntention: intention }))}
                                             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-xs font-medium transition-all ${isSelected
-                                                    ? `${config.bg} ${config.border} ${config.color}`
-                                                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                                                ? `${config.bg} ${config.border} ${config.color}`
+                                                : 'border-slate-200 text-slate-600 hover:border-slate-300'
                                                 }`}
                                         >
                                             <span>{config.emoji}</span>

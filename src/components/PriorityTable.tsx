@@ -16,7 +16,7 @@ const QUAL_RANGES: { key: QualRange; label: string; emoji: string; min: number; 
     { key: '9-10', label: 'Elite (9–10)', emoji: '👑', min: 9, max: 10, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
 ]
 
-type SortKey = 'name' | 'overall' | 'qualification' | 'aesthetics' | 'daysSince' | 'stage' | 'intention' | 'platform'
+type SortKey = 'name' | 'overall' | 'qualification' | 'aesthetics' | 'daysSince' | 'stage' | 'intention' | 'platform' | 'commPlatform'
 type SortDir = 'asc' | 'desc'
 
 interface PriorityTableProps {
@@ -73,6 +73,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
             result = result.filter(l =>
                 l.name.toLowerCase().includes(q) ||
                 l.platformOrigin.toLowerCase().includes(q) ||
+                (l.communicationPlatform || '').toLowerCase().includes(q) ||
                 (l.countryOrigin || '').toLowerCase().includes(q) ||
                 (l.personalityTraits || '').toLowerCase().includes(q)
             )
@@ -106,6 +107,8 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                     return dir * ((a.datingIntention || 'Undecided').localeCompare(b.datingIntention || 'Undecided'))
                 case 'platform':
                     return dir * a.platformOrigin.localeCompare(b.platformOrigin)
+                case 'commPlatform':
+                    return dir * (a.communicationPlatform || a.platformOrigin).localeCompare(b.communicationPlatform || b.platformOrigin)
                 default:
                     return 0
             }
@@ -261,14 +264,15 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                 <SortHeader label="🧠 Qual" sortKeyName="qualification" />
                                 <SortHeader label="✨ Aesth" sortKeyName="aesthetics" />
                                 <SortHeader label="Stage" sortKeyName="stage" />
-                                <SortHeader label="Platform" sortKeyName="platform" />
+                                <SortHeader label="📍 Origin" sortKeyName="platform" />
+                                <SortHeader label="💬 Talking On" sortKeyName="commPlatform" />
                                 <SortHeader label="Last Contact" sortKeyName="daysSince" />
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {filteredAndSorted.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-400">
+                                    <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-400">
                                         No leads match your filters
                                     </td>
                                 </tr>
@@ -281,6 +285,8 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                     const intention = lead.datingIntention || 'Undecided'
                                     const intentionCfg = INTENTION_CONFIG[intention]
                                     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
+                                    const commPlatform = lead.communicationPlatform || lead.platformOrigin
+                                    const commPlatformIcon = PLATFORM_ICONS[commPlatform] || '📱'
 
                                     return (
                                         <tr
@@ -327,6 +333,9 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                             </td>
                                             <td className="px-3 py-3 text-slate-600 whitespace-nowrap">
                                                 {platformIcon} {lead.platformOrigin}
+                                            </td>
+                                            <td className="px-3 py-3 text-slate-600 whitespace-nowrap">
+                                                {commPlatformIcon} {commPlatform}
                                             </td>
                                             <td className="px-3 py-3">
                                                 <span className={`text-xs font-medium ${daysSince > 7 ? 'text-red-500' : daysSince > 3 ? 'text-amber-500' : 'text-emerald-500'

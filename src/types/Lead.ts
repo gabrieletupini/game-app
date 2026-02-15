@@ -21,6 +21,7 @@ export interface Lead {
     name: string;
     profilePhotoUrl?: string; // Base64 encoded image or URL
     platformOrigin: PlatformOrigin;
+    communicationPlatform?: PlatformOrigin; // Where we're currently talking
     countryOrigin?: string;
     personalityTraits?: string;
     notes?: string;
@@ -42,6 +43,7 @@ export interface CreateLeadInput {
     name: string;
     profilePhotoUrl?: string;
     platformOrigin: PlatformOrigin;
+    communicationPlatform?: PlatformOrigin;
     countryOrigin?: string;
     personalityTraits?: string;
     notes?: string;
@@ -56,6 +58,7 @@ export interface UpdateLeadInput {
     name?: string;
     profilePhotoUrl?: string;
     platformOrigin?: PlatformOrigin;
+    communicationPlatform?: PlatformOrigin;
     countryOrigin?: string;
     personalityTraits?: string;
     notes?: string;

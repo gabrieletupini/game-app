@@ -226,19 +226,29 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                 {/* Format hints */}
                                 <div className="text-xs text-slate-400 space-y-2">
                                     <p className="font-semibold text-slate-500">Expected columns:</p>
-                                    <p>Name (required), Platform, Country, Personality Traits, Notes, Qualification Score (1-10), Aesthetics Score (1-10), Dating Intention, Funnel Stage, Origin / How We Met</p>
+                                    <p>Name (required), Origin Platform, Communication Platform, Country, Personality Traits, Notes, Qualification Score (1-10), Aesthetics Score (1-10), Dating Intention, Funnel Stage, Origin / How We Met</p>
 
                                     {/* SELECT fields - must pick from options */}
                                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2.5">
                                         <p className="font-bold text-amber-700 text-[13px]">🔘 SELECT fields — pick from these exact options:</p>
 
                                         <div>
-                                            <p className="font-semibold text-amber-700 mb-1">📱 Platform:</p>
+                                            <p className="font-semibold text-amber-700 mb-1">📍 Origin Platform <span className="font-normal text-amber-600">(where she comes from)</span>:</p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {['🔥 Tinder', '💛 Bumble', '� Hinge', '�📸 Instagram', '👥 Facebook', '💬 WhatsApp', '🌍 Offline', '📱 Other'].map(p => (
+                                                {['🔥 Tinder', '💛 Bumble', '💜 Hinge', '📸 Instagram', '👥 Facebook', '💬 WhatsApp', '🌍 Offline', '📱 Other'].map(p => (
                                                     <span key={p} className="bg-white border border-amber-200 text-amber-800 px-2 py-0.5 rounded-md font-medium">{p}</span>
                                                 ))}
                                             </div>
+                                        </div>
+
+                                        <div>
+                                            <p className="font-semibold text-amber-700 mb-1">💬 Communication Platform <span className="font-normal text-amber-600">(where you're talking now)</span>:</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {['🔥 Tinder', '💛 Bumble', '💜 Hinge', '📸 Instagram', '👥 Facebook', '💬 WhatsApp', '🌍 Offline', '📱 Other'].map(p => (
+                                                    <span key={`comm-${p}`} className="bg-white border border-purple-200 text-purple-800 px-2 py-0.5 rounded-md font-medium">{p}</span>
+                                                ))}
+                                            </div>
+                                            <p className="text-[11px] text-amber-600 mt-1 italic">If empty, defaults to Origin Platform</p>
                                         </div>
 
                                         <div>
@@ -320,7 +330,8 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600 w-8">#</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600 w-8"></th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Name</th>
-                                                    <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Platform</th>
+                                                    <th className="px-3 py-2.5 text-left font-semibold text-slate-600">📍 Origin</th>
+                                                    <th className="px-3 py-2.5 text-left font-semibold text-slate-600">💬 Talking On</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Country</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Qual</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Aesth</th>
@@ -345,6 +356,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                                         </td>
                                                         <td className="px-3 py-2 font-medium text-slate-900 whitespace-nowrap">{lead.name || '—'}</td>
                                                         <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{lead.platformOrigin}</td>
+                                                        <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{lead.communicationPlatform || lead.platformOrigin}</td>
                                                         <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{lead.countryOrigin || '—'}</td>
                                                         <td className="px-3 py-2 text-slate-600">{lead.qualificationScore}</td>
                                                         <td className="px-3 py-2 text-slate-600">{lead.aestheticsScore}</td>

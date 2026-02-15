@@ -176,6 +176,7 @@ export const useGameStore = create<GameStore>()(
                     name: input.name,
                     profilePhotoUrl: input.profilePhotoUrl,
                     platformOrigin: input.platformOrigin,
+                    communicationPlatform: input.communicationPlatform || input.platformOrigin,
                     countryOrigin: input.countryOrigin,
                     personalityTraits: input.personalityTraits,
                     notes: input.notes,

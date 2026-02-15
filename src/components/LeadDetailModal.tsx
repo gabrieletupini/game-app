@@ -16,7 +16,7 @@ import {
     Clock,
 } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
-import type { Lead, FunnelStage, DatingIntention, InteractionType, InteractionDirection } from '../types'
+import type { Lead, FunnelStage, DatingIntention, InteractionType, InteractionDirection, PlatformOrigin } from '../types'
 import { PLATFORM_ICONS, FUNNEL_STAGE_NAMES, INTENTION_CONFIG } from '../utils/constants'
 import { getDaysSince, formatDate } from '../utils/dateHelpers'
 
@@ -26,6 +26,8 @@ interface LeadDetailModalProps {
 }
 
 const STAGES: FunnelStage[] = ['Stage1', 'Stage2', 'Stage3', 'Stage4', 'Lover', 'Dead']
+
+const ALL_PLATFORMS: PlatformOrigin[] = ['Tinder', 'Bumble', 'Hinge', 'Instagram', 'Facebook', 'WhatsApp', 'Offline', 'Other']
 
 const interactionTypeIcons: Record<InteractionType, React.ElementType> = {
     Message: MessageCircle,
@@ -53,6 +55,8 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     // Edit form state
     const [editForm, setEditForm] = useState({
         name: lead.name,
+        platformOrigin: lead.platformOrigin as PlatformOrigin,
+        communicationPlatform: (lead.communicationPlatform || lead.platformOrigin) as PlatformOrigin,
         countryOrigin: lead.countryOrigin || '',
         personalityTraits: lead.personalityTraits || '',
         notes: lead.notes || '',
@@ -76,6 +80,8 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     const handleSaveEdit = () => {
         updateLead(lead.id, {
             name: editForm.name.trim(),
+            platformOrigin: editForm.platformOrigin,
+            communicationPlatform: editForm.communicationPlatform,
             countryOrigin: editForm.countryOrigin.trim() || undefined,
             personalityTraits: editForm.personalityTraits.trim() || undefined,
             notes: editForm.notes.trim() || undefined,
@@ -115,6 +121,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     }
 
     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
+    const commIcon = PLATFORM_ICONS[lead.communicationPlatform || lead.platformOrigin] || '📱'
     const tempEmoji = lead.temperature === 'Hot' ? '🔥' : lead.temperature === 'Warm' ? '🌡️' : '❄️'
     const tempClass = lead.temperature === 'Hot' ? 'temp-hot' : lead.temperature === 'Warm' ? 'temp-warm' : 'temp-cold'
 
@@ -150,9 +157,14 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                             <div className="flex-1 min-w-0">
                                 <h2 className="text-xl font-bold text-slate-900 truncate pr-8">{lead.name}</h2>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                    <span className="text-sm text-slate-500">
-                                        {platformIcon} {lead.platformOrigin}
+                                    <span className="text-sm text-slate-500" title="Origin Platform">
+                                        📍 {platformIcon} {lead.platformOrigin}
                                     </span>
+                                    {lead.communicationPlatform && lead.communicationPlatform !== lead.platformOrigin && (
+                                        <span className="text-sm text-slate-500" title="Communication Platform">
+                                            • 💬 {commIcon} {lead.communicationPlatform}
+                                        </span>
+                                    )}
                                     {lead.countryOrigin && (
                                         <span className="text-sm text-slate-400">• {lead.countryOrigin}</span>
                                     )}
@@ -232,6 +244,37 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                                 onChange={e => setEditForm(f => ({ ...f, countryOrigin: e.target.value }))}
                                                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
                                             />
+                                        </div>
+                                        {/* Platform pickers */}
+                                        <div>
+                                            <label className="text-xs font-medium text-slate-500 mb-1.5 block">📍 Origin Platform</label>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {ALL_PLATFORMS.map(p => (
+                                                    <button
+                                                        key={p}
+                                                        type="button"
+                                                        onClick={() => setEditForm(f => ({ ...f, platformOrigin: p }))}
+                                                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition ${editForm.platformOrigin === p ? 'border-brand-400 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                                                    >
+                                                        {PLATFORM_ICONS[p] || '📱'} {p}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-slate-500 mb-1.5 block">💬 Communication Platform</label>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {ALL_PLATFORMS.map(p => (
+                                                    <button
+                                                        key={p}
+                                                        type="button"
+                                                        onClick={() => setEditForm(f => ({ ...f, communicationPlatform: p }))}
+                                                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition ${editForm.communicationPlatform === p ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                                                    >
+                                                        {PLATFORM_ICONS[p] || '📱'} {p}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                         <div className="bg-slate-50 rounded-xl p-3 space-y-3">
                                             <div className="flex items-center justify-between">

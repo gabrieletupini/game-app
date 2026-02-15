@@ -120,7 +120,9 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
                                                 )}
                                             </div>
                                             <p className="text-sm text-slate-500 mt-0.5">
-                                                {lead.platformOrigin}{lead.countryOrigin ? ` • ${lead.countryOrigin}` : ''}
+                                                📍 {lead.platformOrigin}
+                                                {lead.communicationPlatform && lead.communicationPlatform !== lead.platformOrigin && ` → 💬 ${lead.communicationPlatform}`}
+                                                {lead.countryOrigin ? ` • ${lead.countryOrigin}` : ''}
                                             </p>
                                         </div>
 
