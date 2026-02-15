@@ -17,6 +17,7 @@ const googleProvider = new GoogleAuthProvider()
 // ── Allowed emails (only these accounts can access the app) ──
 const ALLOWED_EMAILS: string[] = [
     'gabritupini@gmail.com',
+    'gabritupini3@gmail.com',
     // Add more emails here to grant access to other people
 ]
 
