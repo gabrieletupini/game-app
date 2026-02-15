@@ -1,20 +1,20 @@
 import { useState, useMemo } from 'react'
 import { Search, ArrowUpDown, ChevronDown, ChevronUp, Filter } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
-import type { Lead, DatingIntention } from '../types'
+import type { Lead, DatingIntention, FunnelStage, PlatformOrigin } from '../types'
 import { FUNNEL_STAGE_NAMES, PLATFORM_ICONS, INTENTION_CONFIG } from '../utils/constants'
 import { getDaysSince } from '../utils/dateHelpers'
 import { getTemperaturePercent } from './TemperatureBoard'
 
 const ALL_INTENTIONS: (DatingIntention | 'All')[] = ['All', 'Short Term', 'Long Term', 'Long Term Open to Short', 'Casual', 'Exploring', 'Undecided']
 
-type QualRange = 'All' | '1-3' | '4-6' | '7-8' | '9-10'
+type QualRange = 'All' | '1-3' | '4-6' | '7' | '8-10'
 const QUAL_RANGES: { key: QualRange; label: string; emoji: string; min: number; max: number; color: string; bg: string; border: string }[] = [
     { key: 'All', label: 'All', emoji: '🎯', min: 0, max: 10, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-300' },
     { key: '1-3', label: 'Low (1–3)', emoji: '🔻', min: 1, max: 3, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
     { key: '4-6', label: 'Mid (4–6)', emoji: '➖', min: 4, max: 6, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-    { key: '7-8', label: 'High (7–8)', emoji: '🔺', min: 7, max: 8, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-    { key: '9-10', label: 'Elite (9–10)', emoji: '👑', min: 9, max: 10, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
+    { key: '7', label: 'High (7)', emoji: '🔺', min: 7, max: 7, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+    { key: '8-10', label: 'Elite (8–10)', emoji: '👑', min: 8, max: 10, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
 ]
 
 type TempRange = 'All' | 'hot' | 'warm' | 'cold'
@@ -43,11 +43,27 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
     const [intentionFilter, setIntentionFilter] = useState<DatingIntention | 'All'>('All')
     const [qualFilter, setQualFilter] = useState<QualRange>('All')
     const [tempFilter, setTempFilter] = useState<TempRange>('All')
+    const [platformFilter, setPlatformFilter] = useState<PlatformOrigin | 'All'>('All')
+    const [stageFilter, setStageFilter] = useState<FunnelStage | 'All'>('All')
     const [countryFilter, setCountryFilter] = useState<string>('All')
     const [traitFilter, setTraitFilter] = useState<string>('All')
     const [search, setSearch] = useState('')
     const [sortKey, setSortKey] = useState<SortKey>('overall')
     const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+    // Collect unique platforms and stages from active leads
+    const allPlatforms = useMemo(() => {
+        const set = new Set<PlatformOrigin>()
+        activeLeads.forEach(l => set.add(l.platformOrigin))
+        return Array.from(set).sort()
+    }, [activeLeads])
+
+    const ACTIVE_STAGES: { key: FunnelStage; label: string }[] = [
+        { key: 'Stage1', label: FUNNEL_STAGE_NAMES.Stage1 },
+        { key: 'Stage2', label: FUNNEL_STAGE_NAMES.Stage2 },
+        { key: 'Stage3', label: FUNNEL_STAGE_NAMES.Stage3 },
+        { key: 'Stage4', label: FUNNEL_STAGE_NAMES.Stage4 },
+    ]
 
     // Collect unique countries and trait keywords from all active leads
     const allCountries = useMemo(() => {
@@ -77,7 +93,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
         }
     }
 
-    const activeFilters = (intentionFilter !== 'All' ? 1 : 0) + (qualFilter !== 'All' ? 1 : 0) + (tempFilter !== 'All' ? 1 : 0) + (countryFilter !== 'All' ? 1 : 0) + (traitFilter !== 'All' ? 1 : 0) + (search.trim() ? 1 : 0)
+    const activeFilters = (intentionFilter !== 'All' ? 1 : 0) + (qualFilter !== 'All' ? 1 : 0) + (tempFilter !== 'All' ? 1 : 0) + (platformFilter !== 'All' ? 1 : 0) + (stageFilter !== 'All' ? 1 : 0) + (countryFilter !== 'All' ? 1 : 0) + (traitFilter !== 'All' ? 1 : 0) + (search.trim() ? 1 : 0)
 
     const filteredAndSorted = useMemo(() => {
         let result = activeLeads
@@ -96,6 +112,16 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                     return q >= range.min && q <= range.max
                 })
             }
+        }
+
+        // Filter by origin platform
+        if (platformFilter !== 'All') {
+            result = result.filter(l => l.platformOrigin === platformFilter)
+        }
+
+        // Filter by funnel stage
+        if (stageFilter !== 'All') {
+            result = result.filter(l => l.funnelStage === stageFilter)
         }
 
         // Filter by temperature range
@@ -172,7 +198,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
         })
 
         return result
-    }, [activeLeads, intentionFilter, qualFilter, tempFilter, countryFilter, traitFilter, search, sortKey, sortDir])
+    }, [activeLeads, intentionFilter, qualFilter, tempFilter, platformFilter, stageFilter, countryFilter, traitFilter, search, sortKey, sortDir])
 
     if (activeLeads.length === 0) return null
 
@@ -201,12 +227,12 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                         <Filter className="w-5 h-5 text-brand-500" />
                         Lead Board
                     </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">Filter by intention, temperature, personality, country &amp; traits • Sort by any column • Click a row to open</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Filter by stage, origin, intention, temperature &amp; more • Sort by any column • Click a row to open</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {activeFilters > 0 && (
                         <button
-                            onClick={() => { setIntentionFilter('All'); setQualFilter('All'); setTempFilter('All'); setCountryFilter('All'); setTraitFilter('All'); setSearch('') }}
+                            onClick={() => { setIntentionFilter('All'); setQualFilter('All'); setTempFilter('All'); setPlatformFilter('All'); setStageFilter('All'); setCountryFilter('All'); setTraitFilter('All'); setSearch('') }}
                             className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition"
                         >
                             ✕ Clear {activeFilters} filter{activeFilters > 1 ? 's' : ''}
@@ -334,7 +360,76 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                 {/* Divider */}
                 <div className="border-t border-slate-100" />
 
-                {/* Row 4: Country filter */}
+                {/* Row 4: Origin Platform filter */}
+                {allPlatforms.length > 0 && (
+                    <>
+                        <div>
+                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">📍 Origin Platform</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    onClick={() => setPlatformFilter('All')}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${platformFilter === 'All' ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}
+                                >
+                                    All
+                                    <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${platformFilter === 'All' ? 'bg-white/60' : 'bg-slate-100'}`}>{activeLeads.length}</span>
+                                </button>
+                                {allPlatforms.map(platform => {
+                                    const count = activeLeads.filter(l => l.platformOrigin === platform).length
+                                    const icon = PLATFORM_ICONS[platform] || '📱'
+                                    return (
+                                        <button
+                                            key={platform}
+                                            onClick={() => setPlatformFilter(platform)}
+                                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${platformFilter === platform ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}
+                                        >
+                                            {icon} {platform}
+                                            <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${platformFilter === platform ? 'bg-white/60' : 'bg-slate-100'}`}>{count}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                        <div className="border-t border-slate-100" />
+                    </>
+                )}
+
+                {/* Row 5: Funnel Stage filter */}
+                <div>
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">📊 Funnel Stage</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            onClick={() => setStageFilter('All')}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${stageFilter === 'All' ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}
+                        >
+                            All
+                            <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${stageFilter === 'All' ? 'bg-white/60' : 'bg-slate-100'}`}>{activeLeads.length}</span>
+                        </button>
+                        {ACTIVE_STAGES.map(({ key, label }) => {
+                            const count = activeLeads.filter(l => l.funnelStage === key).length
+                            const stageColors: Record<string, string> = {
+                                Stage1: 'border-blue-400 bg-blue-50 text-blue-700',
+                                Stage2: 'border-violet-400 bg-violet-50 text-violet-700',
+                                Stage3: 'border-amber-400 bg-amber-50 text-amber-700',
+                                Stage4: 'border-emerald-400 bg-emerald-50 text-emerald-700',
+                            }
+                            return (
+                                <button
+                                    key={key}
+                                    onClick={() => setStageFilter(key)}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${stageFilter === key ? stageColors[key] : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}
+                                >
+                                    {label}
+                                    <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${stageFilter === key ? 'bg-white/60' : 'bg-slate-100'}`}>{count}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100" />
+
+                {/* Row 6: Country filter */}
                 {allCountries.length > 0 && (
                     <>
                         <div>
