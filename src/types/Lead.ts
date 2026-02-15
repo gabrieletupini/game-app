@@ -20,6 +20,7 @@ export interface Lead {
     id: string;
     name: string;
     profilePhotoUrl?: string; // Base64 encoded image or URL
+    photos?: string[]; // Additional photos (base64 or URLs)
     platformOrigin: PlatformOrigin;
     communicationPlatform?: PlatformOrigin[]; // Where we're currently talking (multiple)
     countryOrigin?: string;
@@ -42,6 +43,7 @@ export interface Lead {
 export interface CreateLeadInput {
     name: string;
     profilePhotoUrl?: string;
+    photos?: string[];
     platformOrigin: PlatformOrigin;
     communicationPlatform?: PlatformOrigin[];
     countryOrigin?: string;
@@ -57,6 +59,7 @@ export interface CreateLeadInput {
 export interface UpdateLeadInput {
     name?: string;
     profilePhotoUrl?: string;
+    photos?: string[];
     platformOrigin?: PlatformOrigin;
     communicationPlatform?: PlatformOrigin[];
     countryOrigin?: string;

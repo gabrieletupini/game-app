@@ -226,8 +226,13 @@ export const useGameStore = create<GameStore>()(
 
         updateLead: (id: string, updates: UpdateLeadInput) => {
             try {
+                // Strip undefined values so they don't overwrite existing data
+                const cleanUpdates: Record<string, unknown> = {};
+                for (const [key, value] of Object.entries(updates)) {
+                    if (value !== undefined) cleanUpdates[key] = value;
+                }
                 const updatedData = {
-                    ...updates,
+                    ...cleanUpdates,
                     updatedAt: new Date().toISOString()
                 };
 

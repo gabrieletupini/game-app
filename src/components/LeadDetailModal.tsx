@@ -15,6 +15,8 @@ import {
     Save,
     Clock,
     Upload,
+    ImagePlus,
+    ZoomIn,
 } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import type { Lead, FunnelStage, DatingIntention, InteractionType, InteractionDirection, PlatformOrigin } from '../types'
@@ -55,7 +57,10 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
 
     // Photo editing
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const galleryInputRef = useRef<HTMLInputElement>(null)
     const [editPhoto, setEditPhoto] = useState<string | null>(null) // null = unchanged
+    const [editGallery, setEditGallery] = useState<string[]>(lead.photos || [])
+    const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
 
     const processImageFile = useCallback((file: File) => {
         if (!file.type.startsWith('image/')) return
@@ -68,6 +73,17 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
         reader.readAsDataURL(file)
     }, [])
 
+    const processGalleryFile = useCallback((file: File) => {
+        if (!file.type.startsWith('image/')) return
+        if (file.size > 5 * 1024 * 1024) return
+        const reader = new FileReader()
+        reader.onload = () => {
+            const base64 = reader.result as string
+            setEditGallery(prev => [...prev, base64])
+        }
+        reader.readAsDataURL(file)
+    }, [])
+
     const handlePaste = useCallback((e: React.ClipboardEvent) => {
         if (!isEditing) return
         const items = e.clipboardData?.items
@@ -76,11 +92,11 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             if (item.type.startsWith('image/')) {
                 e.preventDefault()
                 const file = item.getAsFile()
-                if (file) processImageFile(file)
+                if (file) processGalleryFile(file)
                 return
             }
         }
-    }, [isEditing, processImageFile])
+    }, [isEditing, processGalleryFile])
 
     // Edit form state
     const [editForm, setEditForm] = useState({
@@ -108,9 +124,8 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
         : getDaysSince(lead.createdAt)
 
     const handleSaveEdit = () => {
-        updateLead(lead.id, {
+        const update: Record<string, unknown> = {
             name: editForm.name.trim(),
-            profilePhotoUrl: editPhoto !== null ? editPhoto : undefined, // only update if changed
             platformOrigin: editForm.platformOrigin,
             communicationPlatform: editForm.communicationPlatform,
             countryOrigin: editForm.countryOrigin.trim() || undefined,
@@ -120,7 +135,13 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             aestheticsScore: editForm.aestheticsScore,
             datingIntention: editForm.datingIntention,
             originDetails: editForm.originDetails.trim() || undefined,
-        })
+            photos: editGallery,
+        }
+        // Only update profile photo if user explicitly changed it
+        if (editPhoto !== null) {
+            update.profilePhotoUrl = editPhoto
+        }
+        updateLead(lead.id, update as any)
         setIsEditing(false)
         setEditPhoto(null)
         addToast({ type: 'success', title: 'Lead Updated', message: `${editForm.name} has been updated`, duration: 2000 })
@@ -296,6 +317,49 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                                 className="hidden"
                                             />
                                         </div>
+
+                                        {/* Gallery edit */}
+                                        <div>
+                                            <label className="text-xs font-medium text-slate-500 mb-1.5 block">📸 Photo Gallery <span className="text-[10px] text-slate-400">(paste ⌘V or upload)</span></label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {editGallery.map((photo, idx) => (
+                                                    <div key={idx} className="relative group">
+                                                        <img
+                                                            src={photo}
+                                                            alt={`Gallery ${idx + 1}`}
+                                                            className="w-16 h-16 rounded-lg object-cover ring-1 ring-slate-200 shadow-sm"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditGallery(prev => prev.filter((_, i) => i !== idx))}
+                                                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                <div
+                                                    onClick={() => galleryInputRef.current?.click()}
+                                                    className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-brand-400 hover:text-brand-500 transition cursor-pointer gap-0.5"
+                                                >
+                                                    <ImagePlus className="w-4 h-4" />
+                                                    <span className="text-[9px]">Add</span>
+                                                </div>
+                                            </div>
+                                            <input
+                                                ref={galleryInputRef}
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp"
+                                                multiple
+                                                onChange={e => {
+                                                    const files = e.target.files
+                                                    if (files) Array.from(files).forEach(f => processGalleryFile(f))
+                                                    e.target.value = ''
+                                                }}
+                                                className="hidden"
+                                            />
+                                        </div>
+
                                         <div>
                                             <label className="text-xs font-medium text-slate-500">Name</label>
                                             <input
@@ -536,6 +600,32 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                             <p className="text-sm text-slate-700 mt-1">{lead.notes || <span className="text-slate-400 italic">No notes</span>}</p>
                                         </div>
 
+                                        {/* Photo Gallery */}
+                                        {lead.photos && lead.photos.length > 0 && (
+                                            <div>
+                                                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">📸 Photos ({lead.photos.length})</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {lead.photos.map((photo, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => setLightboxPhoto(photo)}
+                                                            className="relative group"
+                                                        >
+                                                            <img
+                                                                src={photo}
+                                                                alt={`${lead.name} photo ${idx + 1}`}
+                                                                className="w-20 h-20 rounded-lg object-cover ring-1 ring-slate-200 shadow-sm hover:ring-brand-400 transition"
+                                                            />
+                                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition flex items-center justify-center">
+                                                                <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition" />
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Actions */}
                                         <div className="flex gap-2 pt-2">
                                             <button
@@ -711,6 +801,27 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                     )}
                 </DialogPanel>
             </div>
+
+            {/* Lightbox overlay */}
+            {lightboxPhoto && (
+                <div
+                    className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-8 cursor-pointer"
+                    onClick={() => setLightboxPhoto(null)}
+                >
+                    <img
+                        src={lightboxPhoto}
+                        alt="Full size"
+                        className="max-w-full max-h-full rounded-xl shadow-2xl object-contain"
+                        onClick={e => e.stopPropagation()}
+                    />
+                    <button
+                        onClick={() => setLightboxPhoto(null)}
+                        className="absolute top-6 right-6 p-2 bg-white/20 hover:bg-white/40 rounded-full transition"
+                    >
+                        <X className="w-6 h-6 text-white" />
+                    </button>
+                </div>
+            )}
         </Dialog>
     )
 }
