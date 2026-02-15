@@ -37,10 +37,17 @@ class FirestoreService {
     private static instance: FirestoreService
     private unsubscribe: Unsubscribe | null = null
     private onDataChange: ((data: AppData) => void) | null = null
-    private isWriting = false // prevent echo from our own writes
+    private writeCounter = 0 // tracks concurrent writes; >0 means skip echoes
+    private lastWriteAt = 0  // timestamp of last write completion (grace period)
     private _syncStatus: SyncStatus = 'connecting'
     private _lastError: string | null = null
     private _onSyncStatusChange: ((status: SyncStatus, error?: string) => void) | null = null
+
+    // Write coalescing: at most one setDoc in flight at a time
+    private leadsWriteInProgress = false
+    private pendingLeadsWrite: Lead[] | null = null
+    private interactionsWriteInProgress = false
+    private pendingInteractionsWrite: Interaction[] | null = null
 
     static getInstance(): FirestoreService {
         if (!this.instance) {
@@ -54,6 +61,13 @@ class FirestoreService {
     get syncStatus(): SyncStatus { return this._syncStatus }
     get lastError(): string | null { return this._lastError }
 
+    /** True if any writes are in progress or completed very recently (grace period) */
+    get isBusyWriting(): boolean {
+        if (this.writeCounter > 0) return true
+        // 500ms grace period after last write to catch delayed echoes
+        return (Date.now() - this.lastWriteAt) < 500
+    }
+
     onSyncStatusChange(callback: (status: SyncStatus, error?: string) => void): void {
         this._onSyncStatusChange = callback
     }
@@ -66,6 +80,12 @@ class FirestoreService {
 
     // Subscribe to real-time updates from Firestore
     subscribeToChanges(callback: (data: AppData) => void): Unsubscribe {
+        // Unsubscribe previous listener to prevent duplicates (important for StrictMode)
+        if (this.unsubscribe) {
+            this.unsubscribe()
+            this.unsubscribe = null
+        }
+
         this.onDataChange = callback
 
         this.unsubscribe = onSnapshot(
@@ -74,7 +94,7 @@ class FirestoreService {
                 // Connection is working!
                 this.setSyncStatus('synced')
 
-                if (this.isWriting) return // skip echoes from our own writes
+                if (this.isBusyWriting) return // skip echoes from our own writes
 
                 if (snapshot.exists()) {
                     const data = snapshot.data() as AppData
@@ -160,7 +180,7 @@ class FirestoreService {
 
         // Then save to Firestore (async, might fail if offline)
         try {
-            this.isWriting = true
+            this.writeCounter++
             await setDoc(DATA_DOC_REF, payload, { merge: true })
             this.setSyncStatus('synced')
         } catch (error) {
@@ -168,47 +188,73 @@ class FirestoreService {
             console.error('🔴 Firestore save failed:', msg)
             this.setSyncStatus('error', msg)
         } finally {
-            this.isWriting = false
+            this.writeCounter--
+            this.lastWriteAt = Date.now()
         }
     }
 
-    // Convenience: save just leads
+    // Convenience: save just leads — serialized with coalescing
     async saveLeads(leads: Lead[]): Promise<void> {
         localStorageService.saveLeads(leads)
-        try {
-            this.isWriting = true
-            await setDoc(DATA_DOC_REF, { leads, updatedAt: new Date().toISOString() }, { merge: true })
-            this.setSyncStatus('synced')
-        } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error)
-            console.error('🔴 Firestore saveLeads failed:', msg)
-            this.setSyncStatus('error', msg)
-        } finally {
-            this.isWriting = false
+
+        // If a write is already in flight, queue the latest data (previous queued data is discarded)
+        this.pendingLeadsWrite = leads
+        if (this.leadsWriteInProgress) return
+
+        this.leadsWriteInProgress = true
+        this.writeCounter++
+
+        while (this.pendingLeadsWrite) {
+            const dataToWrite = this.pendingLeadsWrite
+            this.pendingLeadsWrite = null
+            try {
+                await setDoc(DATA_DOC_REF, { leads: dataToWrite, updatedAt: new Date().toISOString() }, { merge: true })
+                this.setSyncStatus('synced')
+            } catch (error) {
+                const msg = error instanceof Error ? error.message : String(error)
+                console.error('🔴 Firestore saveLeads failed:', msg)
+                this.setSyncStatus('error', msg)
+            }
         }
+
+        this.writeCounter--
+        this.lastWriteAt = Date.now()
+        this.leadsWriteInProgress = false
     }
 
-    // Convenience: save just interactions
+    // Convenience: save just interactions — serialized with coalescing
     async saveInteractions(interactions: Interaction[]): Promise<void> {
         localStorageService.saveInteractions(interactions)
-        try {
-            this.isWriting = true
-            await setDoc(DATA_DOC_REF, { interactions, updatedAt: new Date().toISOString() }, { merge: true })
-            this.setSyncStatus('synced')
-        } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error)
-            console.error('🔴 Firestore saveInteractions failed:', msg)
-            this.setSyncStatus('error', msg)
-        } finally {
-            this.isWriting = false
+
+        this.pendingInteractionsWrite = interactions
+        if (this.interactionsWriteInProgress) return
+
+        this.interactionsWriteInProgress = true
+        this.writeCounter++
+
+        while (this.pendingInteractionsWrite) {
+            const dataToWrite = this.pendingInteractionsWrite
+            this.pendingInteractionsWrite = null
+            try {
+                await setDoc(DATA_DOC_REF, { interactions: dataToWrite, updatedAt: new Date().toISOString() }, { merge: true })
+                this.setSyncStatus('synced')
+            } catch (error) {
+                const msg = error instanceof Error ? error.message : String(error)
+                console.error('🔴 Firestore saveInteractions failed:', msg)
+                this.setSyncStatus('error', msg)
+            }
         }
+
+        this.writeCounter--
+        this.lastWriteAt = Date.now()
+        this.interactionsWriteInProgress = false
     }
 
     // Convenience: save just settings
     async saveSettings(settings: AppSettings): Promise<void> {
         localStorageService.saveSettings(settings)
         try {
-            this.isWriting = true
+            this.writeCounter++
             await setDoc(DATA_DOC_REF, { settings, updatedAt: new Date().toISOString() }, { merge: true })
             this.setSyncStatus('synced')
         } catch (error) {
@@ -216,7 +262,8 @@ class FirestoreService {
             console.error('🔴 Firestore saveSettings failed:', msg)
             this.setSyncStatus('error', msg)
         } finally {
-            this.isWriting = false
+            this.writeCounter--
+            this.lastWriteAt = Date.now()
         }
     }
 
@@ -224,7 +271,7 @@ class FirestoreService {
     async clearAll(): Promise<void> {
         localStorageService.clearAllData()
         try {
-            this.isWriting = true
+            this.writeCounter++
             await setDoc(DATA_DOC_REF, {
                 leads: [],
                 interactions: [],
@@ -234,7 +281,8 @@ class FirestoreService {
         } catch (error) {
             console.warn('Firestore clearAll failed:', error)
         } finally {
-            this.isWriting = false
+            this.writeCounter--
+            this.lastWriteAt = Date.now()
         }
     }
 }

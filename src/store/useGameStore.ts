@@ -24,6 +24,9 @@ import { firestoreService } from '../services/firestoreService';
 import type { SyncStatus } from '../services/firestoreService';
 import { v4 as uuidv4 } from 'uuid';
 
+// Guard against loadData being called multiple times (React StrictMode)
+let dataLoaded = false;
+
 // Migrate old data: convert communicationPlatform from string to array
 function normalizeLead(lead: Lead): Lead {
     const cp = lead.communicationPlatform as unknown;
@@ -182,6 +185,10 @@ export const useGameStore = create<GameStore>()(
 
         // Load data from Firestore (falls back to localStorage if offline)
         loadData: () => {
+            // Guard: prevent double execution (React StrictMode calls effects twice)
+            if (dataLoaded) return;
+            dataLoaded = true;
+
             set({ loading: { isLoading: true, message: 'Loading data...' } });
 
             // Wire up sync status tracking

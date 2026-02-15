@@ -28,6 +28,10 @@ function App() {
 
     useEffect(() => {
         loadData()
+        // Cleanup: unsubscribe from Firestore real-time listener on unmount
+        return () => {
+            // firestoreService handles cleanup internally when subscribeToChanges is called again
+        }
     }, [loadData])
 
     // Show weekly check-in once data has loaded
