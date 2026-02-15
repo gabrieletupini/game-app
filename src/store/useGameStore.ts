@@ -39,6 +39,36 @@ function normalizeLeads(leads: Lead[]): Lead[] {
     return leads.map(normalizeLead);
 }
 
+/** Merge two lead arrays: for leads in both, pick the one with the more recent updatedAt.
+ *  Leads only in one source are always kept. */
+function mergeLeads(localLeads: Lead[], remoteLeads: Lead[]): Lead[] {
+    const localMap = new Map(localLeads.map(l => [l.id, l]));
+    const remoteMap = new Map(remoteLeads.map(l => [l.id, l]));
+    const allIds = new Set([...localMap.keys(), ...remoteMap.keys()]);
+    const merged: Lead[] = [];
+
+    for (const id of allIds) {
+        const local = localMap.get(id);
+        const remote = remoteMap.get(id);
+        if (local && remote) {
+            // Pick whichever was updated more recently
+            merged.push(new Date(local.updatedAt) >= new Date(remote.updatedAt) ? local : remote);
+        } else {
+            merged.push((local || remote)!);
+        }
+    }
+    return merged;
+}
+
+/** Merge two interaction arrays: union by ID. */
+function mergeInteractions(localInts: Interaction[], remoteInts: Interaction[]): Interaction[] {
+    const map = new Map(localInts.map(i => [i.id, i]));
+    for (const ri of remoteInts) {
+        if (!map.has(ri.id)) map.set(ri.id, ri);
+    }
+    return Array.from(map.values());
+}
+
 // Default settings
 const DEFAULT_SETTINGS: AppSettings = {
     user: {},
@@ -179,15 +209,8 @@ export const useGameStore = create<GameStore>()(
             firestoreService.loadAll().then(data => {
                 const incomingLeads = normalizeLeads(data.leads || []);
                 const incomingInteractions = data.interactions || [];
-
-                // Merge: keep local leads/interactions not yet in Firestore
-                const incomingLeadIds = new Set(incomingLeads.map(l => l.id));
-                const localOnlyLeads = get().leads.filter(l => !incomingLeadIds.has(l.id));
-                const mergedLeads = [...incomingLeads, ...localOnlyLeads];
-
-                const incomingIntIds = new Set(incomingInteractions.map(i => i.id));
-                const localOnlyInts = get().interactions.filter(i => !incomingIntIds.has(i.id));
-                const mergedInteractions = [...incomingInteractions, ...localOnlyInts];
+                const mergedLeads = mergeLeads(get().leads, incomingLeads);
+                const mergedInteractions = mergeInteractions(get().interactions, incomingInteractions);
 
                 set({
                     leads: mergedLeads,
@@ -195,9 +218,8 @@ export const useGameStore = create<GameStore>()(
                     settings: data.settings || DEFAULT_SETTINGS,
                 });
 
-                // If we had local-only data, push it back to Firestore
-                if (localOnlyLeads.length > 0) firestoreService.saveLeads(mergedLeads);
-                if (localOnlyInts.length > 0) firestoreService.saveInteractions(mergedInteractions);
+                // Push merged state back if we had local-only or newer-local data
+                firestoreService.saveLeads(mergedLeads);
 
                 // Recalculate after Firestore hydration too
                 setTimeout(() => get().recalculateAllTemperatures(), 100);
@@ -209,15 +231,10 @@ export const useGameStore = create<GameStore>()(
             firestoreService.subscribeToChanges((data) => {
                 const incomingLeads = normalizeLeads(data.leads || []);
                 const incomingInteractions = data.interactions || [];
-
-                // Merge: keep local leads/interactions not yet in Firestore
-                const incomingLeadIds = new Set(incomingLeads.map(l => l.id));
-                const localOnlyLeads = get().leads.filter(l => !incomingLeadIds.has(l.id));
-                const mergedLeads = [...incomingLeads, ...localOnlyLeads];
-
-                const incomingIntIds = new Set(incomingInteractions.map(i => i.id));
-                const localOnlyInts = get().interactions.filter(i => !incomingIntIds.has(i.id));
-                const mergedInteractions = [...incomingInteractions, ...localOnlyInts];
+                const mergedLeads = mergeLeads(get().leads, incomingLeads);
+                const mergedInteractions = mergeInteractions(get().interactions, incomingInteractions);
+                const needsResync = mergedLeads.length !== incomingLeads.length ||
+                    mergedLeads.some((l, i) => l !== incomingLeads[i]);
 
                 set({
                     leads: mergedLeads,
@@ -225,9 +242,8 @@ export const useGameStore = create<GameStore>()(
                     settings: data.settings || get().settings,
                 });
 
-                // Re-sync if we merged in local-only data
-                if (localOnlyLeads.length > 0) firestoreService.saveLeads(mergedLeads);
-                if (localOnlyInts.length > 0) firestoreService.saveInteractions(mergedInteractions);
+                // Re-sync if local had newer or extra data
+                if (needsResync) firestoreService.saveLeads(mergedLeads);
             });
         },
 
@@ -713,8 +729,8 @@ export const useGameStore = create<GameStore>()(
             const lead = get().getLeadById(leadId);
             if (!lead) return 'Cold';
 
-            // Use lastResponseDate (incoming) if available, otherwise lastInteractionDate, otherwise createdAt
-            const referenceDate = lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt;
+            // Use temperatureRefDate (manual anchor) first, then lastResponseDate, then fallbacks
+            const referenceDate = lead.temperatureRefDate || lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt;
             const now = new Date();
             const refDate = new Date(referenceDate);
             const daysSince = Math.floor((now.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
