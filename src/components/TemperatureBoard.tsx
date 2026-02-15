@@ -80,6 +80,8 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
     const [notesValue, setNotesValue] = useState('')
     const [editingTemp, setEditingTemp] = useState<string | null>(null)
     const [tempInputValue, setTempInputValue] = useState('')
+    const [editingDays, setEditingDays] = useState<string | null>(null)
+    const [daysInputValue, setDaysInputValue] = useState('')
 
     const handleTempEdit = useCallback((leadId: string, currentPct: number, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -95,6 +97,21 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
         }
         setEditingTemp(null)
     }, [tempInputValue, updateLead])
+
+    const handleDaysEdit = useCallback((leadId: string, currentDays: number, e: React.MouseEvent) => {
+        e.stopPropagation()
+        setEditingDays(leadId)
+        setDaysInputValue(String(currentDays))
+    }, [])
+
+    const commitDaysEdit = useCallback((leadId: string) => {
+        const val = parseInt(daysInputValue, 10)
+        if (!isNaN(val) && val >= 0) {
+            const newDate = new Date(Date.now() - val * 86_400_000).toISOString()
+            updateLead(leadId, { lastResponseDate: newDate })
+        }
+        setEditingDays(null)
+    }, [daysInputValue, updateLead])
 
     const openNotes = useCallback((leadId: string, current: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -210,7 +227,9 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                             <ul className="space-y-1 text-xs">
                                 <li>• <span className="font-bold">Click the percentage number</span> on any lead to type a new temperature value</li>
                                 <li>• The decay algorithm adapts automatically — temperature will <span className="font-bold">continue decaying</span> from your new value</li>
-                                <li>• When the lead sends a new <span className="font-bold">incoming response</span>, it resets to 100% as usual</li>
+                                <li>• <span className="font-bold">Click the "Xd since last response"</span> text to manually correct the days counter</li>
+                                <li>• Temperature % and days since response are <span className="font-bold">tracked independently</span> — editing one doesn't affect the other</li>
+                                <li>• When the lead sends a new <span className="font-bold">incoming response</span>, both reset automatically</li>
                                 <li>• Use the <MessageSquare className="w-3 h-3 text-slate-400 inline" /> <span className="font-bold">notes icon</span> to add context about why the temperature changed</li>
                             </ul>
                         </div>
@@ -252,8 +271,9 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
             ) : (
                 <div className="space-y-2">
                     {activeLeads.map(({ lead, pct, checkedIn }) => {
-                        const ref = lead.temperatureRefDate || lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt
-                        const days = Math.max(0, Math.floor((Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24)))
+                        // Days since last REAL response (independent of temperature)
+                        const realRef = lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt
+                        const days = Math.max(0, Math.floor((Date.now() - new Date(realRef).getTime()) / (1000 * 60 * 60 * 24)))
 
                         return (
                             <div
@@ -311,10 +331,33 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                                                 />
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className={`text-[11px] font-medium ${days > 7 ? 'text-red-500' : days > 3 ? 'text-amber-500' : 'text-slate-400'}`}>
-                                                {days === 0 ? 'Responded today' : `${days}d since last response`}
-                                            </span>
+                                        <div className="flex items-center gap-2 mt-1" onClick={e => e.stopPropagation()}>
+                                            {editingDays === lead.id ? (
+                                                <div className="flex items-center gap-1">
+                                                    <input
+                                                        autoFocus
+                                                        type="number"
+                                                        min={0}
+                                                        className="w-10 text-center text-[11px] font-bold bg-white border-2 border-brand-400 rounded-md px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        value={daysInputValue}
+                                                        onChange={e => setDaysInputValue(e.target.value)}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') commitDaysEdit(lead.id)
+                                                            if (e.key === 'Escape') setEditingDays(null)
+                                                        }}
+                                                        onBlur={() => commitDaysEdit(lead.id)}
+                                                    />
+                                                    <span className="text-[11px] text-slate-400">days since last response</span>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => handleDaysEdit(lead.id, days, e)}
+                                                    className={`text-[11px] font-medium hover:underline hover:decoration-dotted cursor-text transition ${days > 7 ? 'text-red-500' : days > 3 ? 'text-amber-500' : 'text-slate-400'}`}
+                                                    title="Click to edit days since last response"
+                                                >
+                                                    {days === 0 ? 'Responded today' : `${days}d since last response`}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
