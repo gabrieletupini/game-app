@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
-import { Doughnut, Bar } from 'react-chartjs-2'
+import { Doughnut } from 'react-chartjs-2'
 import { useGameStore } from '../store/useGameStore'
-import type { FunnelStage, PlatformOrigin } from '../types'
+import type { PlatformOrigin } from '../types'
 
 ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
@@ -27,26 +27,6 @@ const PLATFORM_EMOJIS: Record<string, string> = {
     Offline: '🌍',
     Other: '📱',
 }
-
-const STAGE_COLORS: Record<string, string> = {
-    Stage1: 'rgba(59, 130, 246, 0.75)',
-    Stage2: 'rgba(16, 185, 129, 0.75)',
-    Stage3: 'rgba(245, 158, 11, 0.75)',
-    Stage4: 'rgba(139, 92, 246, 0.75)',
-    Lover: 'rgba(236, 72, 153, 0.75)',
-    Dead: 'rgba(148, 163, 184, 0.5)',
-}
-
-const STAGE_LABELS: Record<string, string> = {
-    Stage1: 'Stage 1',
-    Stage2: 'Stage 2',
-    Stage3: 'Stage 3',
-    Stage4: 'Stage 4',
-    Lover: 'Lover',
-    Dead: 'Dead',
-}
-
-const ALL_STAGES: FunnelStage[] = ['Stage1', 'Stage2', 'Stage3', 'Stage4', 'Lover', 'Dead']
 
 export default function OriginChart() {
     const leads = useGameStore(state => state.leads)
@@ -91,69 +71,6 @@ export default function OriginChart() {
                         return ` ${value} leads (${percentage}%)`
                     },
                 },
-            },
-        },
-    }
-
-    // Stacked bar: origin × stage
-    const stackedBarData = useMemo(() => {
-        // Get platforms sorted by count desc
-        const platforms = distribution
-            .sort((a, b) => b.count - a.count)
-            .map(d => d.platform)
-        if (platforms.length === 0) return null
-
-        // For each stage, count per platform (including dead for the full picture)
-        const datasets = ALL_STAGES.map(stage => ({
-            label: STAGE_LABELS[stage],
-            data: platforms.map(p =>
-                leads.filter(l => l.platformOrigin === p && l.funnelStage === stage).length
-            ),
-            backgroundColor: STAGE_COLORS[stage],
-            borderRadius: 4,
-            borderSkipped: false as const,
-        }))
-
-        return {
-            labels: platforms.map(p => `${PLATFORM_EMOJIS[p] || '📱'} ${p}`),
-            datasets,
-        }
-    }, [leads, distribution])
-
-    const stackedBarOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y' as const,
-        plugins: {
-            legend: {
-                display: true,
-                position: 'bottom' as const,
-                labels: {
-                    usePointStyle: true,
-                    pointStyle: 'circle',
-                    boxWidth: 8,
-                    padding: 12,
-                    font: { family: 'Inter', size: 11 },
-                },
-            },
-            tooltip: {
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                titleFont: { family: 'Inter', size: 13, weight: 600 as const },
-                bodyFont: { family: 'Inter', size: 12 },
-                padding: 12,
-                cornerRadius: 10,
-            },
-        },
-        scales: {
-            x: {
-                stacked: true,
-                grid: { color: 'rgba(0,0,0,0.04)' },
-                ticks: { font: { family: 'Inter', size: 11 }, stepSize: 1 },
-            },
-            y: {
-                stacked: true,
-                grid: { display: false },
-                ticks: { font: { family: 'Inter', size: 12 } },
             },
         },
     }
@@ -244,18 +161,7 @@ export default function OriginChart() {
                 </div>
             </div>
 
-            {/* Row 2: Stacked Bar — Origin × Stage Breakdown */}
-            {stackedBarData && (
-                <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                    <h3 className="text-sm font-bold text-slate-900 mb-1">📊 Origin × Stage Breakdown</h3>
-                    <p className="text-xs text-slate-400 mb-4">See how leads from each platform progress through your funnel</p>
-                    <div style={{ height: Math.max(180, distribution.length * 44) }}>
-                        <Bar data={stackedBarData} options={stackedBarOptions} />
-                    </div>
-                </div>
-            )}
-
-            {/* Row 3: Performance Table */}
+            {/* Row 2: Performance Table */}
             {originStats.length > 0 && (
                 <div className="bg-white rounded-2xl border border-slate-200 p-6">
                     <h3 className="text-sm font-bold text-slate-900 mb-1">🏆 Origin Performance</h3>
