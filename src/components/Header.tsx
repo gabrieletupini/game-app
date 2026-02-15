@@ -7,18 +7,20 @@ function DateFlowLogo({ className = 'w-9 h-9' }: { className?: string }) {
     return (
         <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
-                <linearGradient id="logoBg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <linearGradient id="logoGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
                     <stop offset="0%" stopColor="#ec4899" />
-                    <stop offset="50%" stopColor="#a855f7" />
-                    <stop offset="100%" stopColor="#6366f1" />
-                </linearGradient>
-                <linearGradient id="logoHeart" x1="8" y1="8" x2="24" y2="26" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="100%" stopColor="#fce7f3" />
+                    <stop offset="100%" stopColor="#a855f7" />
                 </linearGradient>
             </defs>
-            <rect width="32" height="32" rx="8" fill="url(#logoBg)" />
-            <path d="M16 25.6s-7.2-5.4-9-8.4c-1.2-2-.6-4.8 1.4-6 2-1.2 4.2-.4 5.6 1.2l2 2.4 2-2.4c1.4-1.6 3.6-2.4 5.6-1.2 2 1.2 2.6 4 1.4 6-1.8 3-9 8.4-9 8.4z" fill="url(#logoHeart)" opacity="0.95" />
+            {/* Heart nucleus */}
+            <path d="M16 23s-6.8-4.8-8.2-7.6c-1-1.7-.4-4.2 1.3-5.2 1.7-1 3.6-.3 4.9 1.1l2 2.2 2-2.2c1.3-1.4 3.2-2.1 4.9-1.1 1.7 1 2.3 3.5 1.3 5.2C22.8 18.2 16 23 16 23z"
+                fill="url(#logoGrad)" />
+            {/* Diagonal orbit */}
+            <ellipse cx="16" cy="16" rx="14.5" ry="5.5"
+                transform="rotate(-30 16 16)"
+                stroke="url(#logoGrad)" strokeWidth="1.2" fill="none" opacity="0.45" />
+            {/* Orbiting particle */}
+            <circle cx="23" cy="7.5" r="2.4" fill="url(#logoGrad)" opacity="0.9" />
         </svg>
     )
 }
