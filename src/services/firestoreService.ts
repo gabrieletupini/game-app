@@ -44,7 +44,7 @@ class FirestoreService {
         return this.instance
     }
 
-    private constructor() {}
+    private constructor() { }
 
     // Subscribe to real-time updates from Firestore
     subscribeToChanges(callback: (data: AppData) => void): Unsubscribe {

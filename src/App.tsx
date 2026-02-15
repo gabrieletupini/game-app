@@ -42,7 +42,7 @@ function App() {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
                     <p className="text-sm text-slate-500 mt-3">{loading.message || 'Loading...'}</p>
                 </div>
             </div>

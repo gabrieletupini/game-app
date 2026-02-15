@@ -142,7 +142,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                     className="w-16 h-16 rounded-2xl object-cover ring-2 ring-brand-100 shadow-md"
                                 />
                             ) : (
-                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
                                     {lead.name.charAt(0).toUpperCase()}
                                 </div>
                             )}

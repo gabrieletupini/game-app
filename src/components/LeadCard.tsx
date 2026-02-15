@@ -94,7 +94,7 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
                             className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow"
                         />
                     ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm shadow">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm shadow">
                             {lead.name.charAt(0).toUpperCase()}
                         </div>
                     )}
@@ -158,7 +158,7 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
                         className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow"
                     />
                 ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow">
                         {lead.name.charAt(0).toUpperCase()}
                     </div>
                 )}

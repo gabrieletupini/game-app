@@ -298,7 +298,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                                             className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
                                                         />
                                                     ) : (
-                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center text-white font-semibold text-xs">
+                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-semibold text-xs">
                                                             {lead.name.charAt(0).toUpperCase()}
                                                         </div>
                                                     )}
