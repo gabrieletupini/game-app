@@ -132,6 +132,7 @@ interface GameStore {
     importData: (jsonData: string) => Promise<void>;
     clearAllData: () => void;
     calculateLeadTemperature: (leadId: string) => Temperature;
+    recalculateAllTemperatures: () => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -161,6 +162,9 @@ export const useGameStore = create<GameStore>()(
                 error: { hasError: false }
             });
 
+            // Recalculate temperatures on load (time-based decay)
+            setTimeout(() => get().recalculateAllTemperatures(), 100);
+
             // Then hydrate from Firestore (async)
             firestoreService.loadAll().then(data => {
                 set({
@@ -168,6 +172,8 @@ export const useGameStore = create<GameStore>()(
                     interactions: data.interactions || [],
                     settings: data.settings || DEFAULT_SETTINGS,
                 });
+                // Recalculate after Firestore hydration too
+                setTimeout(() => get().recalculateAllTemperatures(), 100);
             }).catch(err => {
                 console.warn('Firestore hydration failed, using localStorage cache:', err);
             });
@@ -180,6 +186,33 @@ export const useGameStore = create<GameStore>()(
                     settings: data.settings || get().settings,
                 });
             });
+        },
+
+        // Recalculate temperatures for all active leads and snapshot history
+        recalculateAllTemperatures: () => {
+            const leads = get().leads;
+            const now = new Date().toISOString();
+            let changed = false;
+
+            const updatedLeads = leads.map(lead => {
+                if (lead.funnelStage === 'Dead' || lead.funnelStage === 'Lover') return lead;
+
+                const newTemp = get().calculateLeadTemperature(lead.id);
+                if (newTemp === lead.temperature) return lead;
+
+                changed = true;
+                const history = [...(lead.temperatureHistory || [])];
+                // Only record if the temperature actually changed
+                if (history.length === 0 || history[history.length - 1].temperature !== newTemp) {
+                    history.push({ date: now, temperature: newTemp });
+                }
+                return { ...lead, temperature: newTemp, temperatureHistory: history, updatedAt: now };
+            });
+
+            if (changed) {
+                set({ leads: updatedLeads });
+                firestoreService.saveLeads(updatedLeads);
+            }
         },
 
         // Lead Actions
@@ -200,7 +233,8 @@ export const useGameStore = create<GameStore>()(
                     datingIntention: input.datingIntention || 'Undecided',
                     funnelStage: input.funnelStage || 'Stage1',
                     originDetails: input.originDetails,
-                    temperature: 'Cold',
+                    temperature: 'Hot',
+                    temperatureHistory: [{ date: now, temperature: 'Hot' as Temperature }],
                     stageEnteredAt: now,
                     createdAt: now,
                     updatedAt: now
@@ -321,11 +355,29 @@ export const useGameStore = create<GameStore>()(
                 set({ interactions: updatedInteractions });
                 firestoreService.saveInteractions(updatedInteractions);
 
-                // Update lead's last interaction date and recalculate temperature
-                get().updateLead(input.leadId, {
+                // Build update payload
+                const leadUpdate: UpdateLeadInput = {
                     lastInteractionDate: input.occurredAt,
-                    temperature: get().calculateLeadTemperature(input.leadId)
-                });
+                };
+
+                // If incoming response → reset to Hot + record response date
+                if (input.direction === 'Incoming') {
+                    leadUpdate.lastResponseDate = input.occurredAt;
+                    leadUpdate.temperature = 'Hot';
+                    const lead = get().getLeadById(input.leadId);
+                    if (lead) {
+                        const history = [...(lead.temperatureHistory || [])];
+                        if (history.length === 0 || history[history.length - 1].temperature !== 'Hot') {
+                            history.push({ date: new Date().toISOString(), temperature: 'Hot' });
+                        }
+                        leadUpdate.temperatureHistory = history;
+                    }
+                } else {
+                    // Outgoing — just recalculate based on current state
+                    leadUpdate.temperature = get().calculateLeadTemperature(input.leadId);
+                }
+
+                get().updateLead(input.leadId, leadUpdate);
             } catch (error) {
                 get().setError({
                     hasError: true,
@@ -596,28 +648,23 @@ export const useGameStore = create<GameStore>()(
             }
         },
 
-        // Helper function for temperature calculation
+        // Helper function for temperature calculation — response-based decay
+        // Hot → Warm after 3 days with no incoming response
+        // Warm → Cold after 7 days with no incoming response
+        // Incoming interaction resets to Hot
         calculateLeadTemperature: (leadId: string): Temperature => {
             const lead = get().getLeadById(leadId);
-            const interactions = get().getInteractionsByLeadId(leadId);
+            if (!lead) return 'Cold';
 
-            if (!lead || !lead.lastInteractionDate) return 'Cold';
-
+            // Use lastResponseDate (incoming) if available, otherwise lastInteractionDate, otherwise createdAt
+            const referenceDate = lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt;
             const now = new Date();
-            const lastInteraction = new Date(lead.lastInteractionDate);
-            const daysSince = Math.floor((now.getTime() - lastInteraction.getTime()) / (1000 * 60 * 60 * 24));
+            const refDate = new Date(referenceDate);
+            const daysSince = Math.floor((now.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
 
-            const recentInteractions = interactions.filter(interaction => {
-                const interactionDate = new Date(interaction.occurredAt);
-                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                return interactionDate >= weekAgo;
-            }).length;
-
-            const thresholds = get().settings.funnel.temperatureThresholds;
-
-            if (daysSince <= 2 && recentInteractions >= thresholds.hotMinInteractions) {
+            if (daysSince <= 3) {
                 return 'Hot';
-            } else if (daysSince <= thresholds.coldAfterDays && recentInteractions >= thresholds.warmMinInteractions) {
+            } else if (daysSince <= 7) {
                 return 'Warm';
             } else {
                 return 'Cold';

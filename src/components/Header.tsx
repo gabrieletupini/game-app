@@ -1,4 +1,4 @@
-import { Plus, LayoutGrid, Heart as HeartIcon, Skull, BarChart3, Menu, X, Upload, Download } from 'lucide-react'
+import { Plus, LayoutGrid, Heart as HeartIcon, Skull, BarChart3, Menu, X, Upload, Download, ClipboardCheck } from 'lucide-react'
 import { useState } from 'react'
 
 function DateFlowLogo({ className = 'w-9 h-9' }: { className?: string }) {
@@ -29,6 +29,7 @@ interface HeaderProps {
     onAddLead: () => void
     onBulkUpload: () => void
     onExport: () => void
+    onCheckIn: () => void
 }
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -38,7 +39,7 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ]
 
-export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload, onExport }: HeaderProps) {
+export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload, onExport, onCheckIn }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     return (
@@ -79,6 +80,13 @@ export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={onCheckIn}
+                            title="Weekly check-in"
+                            className="p-2.5 text-slate-500 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition hidden sm:flex items-center justify-center"
+                        >
+                            <ClipboardCheck className="w-4 h-4" />
+                        </button>
                         <button
                             onClick={onExport}
                             title="Export all leads as Excel"

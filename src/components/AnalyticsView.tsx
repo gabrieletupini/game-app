@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import { useGameStore } from '../store/useGameStore'
 import { Users, Heart, TrendingUp, Flame, Thermometer, Snowflake, Calendar } from 'lucide-react'
 import OriginChart from './OriginChart'
+import { formatDate } from '../utils/dateHelpers'
 
-ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale, PointElement, LineElement)
 
 export default function AnalyticsView() {
     const leads = useGameStore(state => state.leads)
@@ -192,6 +193,9 @@ export default function AnalyticsView() {
             {/* Origin Analytics — full width section */}
             <OriginChart />
 
+            {/* Messaging Frequency — aggregate weekly chart */}
+            <MessagingOverview interactions={interactions} />
+
             {/* Activity Summary */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6">
                 <h3 className="text-sm font-bold text-slate-900 mb-4">Activity Summary</h3>
@@ -222,6 +226,125 @@ export default function AnalyticsView() {
                     </div>
                 </div>
             </div>
+        </div>
+    )
+}
+
+/** Aggregate messaging frequency chart across all leads */
+function MessagingOverview({ interactions: allInteractions }: { interactions: any[] }) {
+    const weeklyData = useMemo(() => {
+        const now = new Date()
+        const weeks: { label: string; outgoing: number; incoming: number }[] = []
+
+        for (let w = 7; w >= 0; w--) {
+            const weekStart = new Date(now.getTime() - (w + 1) * 7 * 24 * 60 * 60 * 1000)
+            const weekEnd = new Date(now.getTime() - w * 7 * 24 * 60 * 60 * 1000)
+
+            const weekInteractions = allInteractions.filter(i => {
+                const d = new Date(i.occurredAt)
+                return d >= weekStart && d < weekEnd
+            })
+
+            weeks.push({
+                label: formatDate(weekStart, 'MMM dd'),
+                outgoing: weekInteractions.filter((i: any) => i.direction === 'Outgoing').length,
+                incoming: weekInteractions.filter((i: any) => i.direction === 'Incoming').length,
+            })
+        }
+        return weeks
+    }, [allInteractions])
+
+    const totalOut = allInteractions.filter((i: any) => i.direction === 'Outgoing').length
+    const totalIn = allInteractions.filter((i: any) => i.direction === 'Incoming').length
+    const responseRate = totalOut > 0 ? ((totalIn / totalOut) * 100).toFixed(0) : '—'
+
+    const chartData = useMemo(() => ({
+        labels: weeklyData.map(w => w.label),
+        datasets: [
+            {
+                label: '📤 Sent',
+                data: weeklyData.map(w => w.outgoing),
+                backgroundColor: 'rgba(139, 92, 246, 0.65)',
+                borderRadius: 4,
+            },
+            {
+                label: '📥 Received',
+                data: weeklyData.map(w => w.incoming),
+                backgroundColor: 'rgba(16, 185, 129, 0.65)',
+                borderRadius: 4,
+            },
+        ],
+    }), [weeklyData])
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'bottom' as const,
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    boxWidth: 8,
+                    padding: 12,
+                    font: { family: 'Inter', size: 11 },
+                },
+            },
+            tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                titleFont: { family: 'Inter', size: 13, weight: 600 as const },
+                bodyFont: { family: 'Inter', size: 12 },
+                padding: 12,
+                cornerRadius: 10,
+            },
+        },
+        scales: {
+            x: {
+                stacked: true,
+                grid: { display: false },
+                ticks: { font: { family: 'Inter', size: 11 } },
+            },
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.04)' },
+                ticks: { font: { family: 'Inter', size: 11 }, stepSize: 1 },
+            },
+        },
+    }
+
+    return (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+                <div>
+                    <h3 className="text-sm font-bold text-slate-900">💬 Messaging Frequency</h3>
+                    <p className="text-xs text-slate-400">Weekly sent vs received across all leads (last 8 weeks)</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="text-center">
+                        <p className="text-lg font-bold text-purple-600">{totalOut}</p>
+                        <p className="text-[10px] text-slate-400">Sent</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-lg font-bold text-emerald-600">{totalIn}</p>
+                        <p className="text-[10px] text-slate-400">Received</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-lg font-bold text-slate-700">{responseRate}%</p>
+                        <p className="text-[10px] text-slate-400">Response Rate</p>
+                    </div>
+                </div>
+            </div>
+            {allInteractions.length === 0 ? (
+                <div className="flex items-center justify-center h-48 text-sm text-slate-400">
+                    Log interactions to see messaging data
+                </div>
+            ) : (
+                <div className="h-52">
+                    <Bar data={chartData} options={chartOptions} />
+                </div>
+            )}
         </div>
     )
 }

@@ -11,6 +11,7 @@ import LoversTable from './components/LoversTable'
 import DeadLeadsTable from './components/DeadLeadsTable'
 import AnalyticsView from './components/AnalyticsView'
 import PriorityTable from './components/PriorityTable'
+import WeeklyCheckIn, { shouldShowWeeklyCheckIn } from './components/WeeklyCheckIn'
 import ToastContainer from './components/Toast'
 import { exportLeadsToExcel } from './services/excelService'
 
@@ -22,13 +23,21 @@ function App() {
     const [showAddModal, setShowAddModal] = useState(false)
     const [showBulkUpload, setShowBulkUpload] = useState(false)
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+    const [showWeeklyCheckIn, setShowWeeklyCheckIn] = useState(false)
 
     useEffect(() => {
         loadData()
     }, [loadData])
 
-    // When store updates the lead, refresh the selected lead if it's open
+    // Show weekly check-in once data has loaded
     const leads = useGameStore(state => state.leads)
+    useEffect(() => {
+        if (!loading.isLoading && leads.length > 0 && shouldShowWeeklyCheckIn()) {
+            // Small delay so the app feels ready first
+            const timer = setTimeout(() => setShowWeeklyCheckIn(true), 800)
+            return () => clearTimeout(timer)
+        }
+    }, [loading.isLoading, leads.length])
     useEffect(() => {
         if (selectedLead) {
             const updated = leads.find(l => l.id === selectedLead.id)
@@ -57,6 +66,7 @@ function App() {
                 onAddLead={() => setShowAddModal(true)}
                 onBulkUpload={() => setShowBulkUpload(true)}
                 onExport={() => exportLeadsToExcel(leads)}
+                onCheckIn={() => setShowWeeklyCheckIn(true)}
             />
 
             <main className="max-w-[1440px] mx-auto px-4 sm:px-6 py-6">
@@ -104,6 +114,12 @@ function App() {
                     onClose={() => setSelectedLead(null)}
                 />
             )}
+
+            {/* Weekly Check-In */}
+            <WeeklyCheckIn
+                isOpen={showWeeklyCheckIn}
+                onClose={() => setShowWeeklyCheckIn(false)}
+            />
 
             {/* Toasts */}
             <ToastContainer />

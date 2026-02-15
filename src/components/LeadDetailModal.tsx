@@ -19,6 +19,7 @@ import {
     ZoomIn,
 } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
+import TemperatureTimeline from './TemperatureTimeline'
 import type { Lead, FunnelStage, DatingIntention, InteractionType, InteractionDirection, PlatformOrigin } from '../types'
 import { PLATFORM_ICONS, FUNNEL_STAGE_NAMES, INTENTION_CONFIG } from '../utils/constants'
 import { getDaysSince, formatDate } from '../utils/dateHelpers'
@@ -51,6 +52,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     } = useGameStore()
 
     const interactions = getInteractionsByLeadId(lead.id)
+    const allInteractions = useGameStore(state => state.interactions)
     const [isEditing, setIsEditing] = useState(false)
     const [activeSection, setActiveSection] = useState<'details' | 'interactions'>('details')
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -625,6 +627,11 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* Temperature Timeline & Messaging */}
+                                        <div className="bg-slate-50 rounded-xl p-4">
+                                            <TemperatureTimeline lead={lead} interactions={allInteractions} compact />
+                                        </div>
 
                                         {/* Actions */}
                                         <div className="flex gap-2 pt-2">

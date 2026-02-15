@@ -33,6 +33,8 @@ export interface Lead {
     originDetails?: string; // Where/how met
     temperature: Temperature;
     lastInteractionDate?: string; // ISO date string
+    lastResponseDate?: string; // ISO date string — last INCOMING interaction
+    temperatureHistory?: { date: string; temperature: Temperature }[]; // timeline snapshots
     stageEnteredAt: string; // ISO date string
     deadFromStage?: FunnelStage; // Which stage lead was in when moved to Dead
     deadNotes?: string; // Notes about why lead went dead
@@ -71,6 +73,8 @@ export interface UpdateLeadInput {
     originDetails?: string;
     temperature?: Temperature;
     lastInteractionDate?: string;
+    lastResponseDate?: string;
+    temperatureHistory?: { date: string; temperature: Temperature }[];
     deadNotes?: string;
 }
 
