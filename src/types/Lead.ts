@@ -32,6 +32,7 @@ export interface Lead {
     funnelStage: FunnelStage;
     originDetails?: string; // Where/how met
     instagramUrl?: string; // Instagram profile link
+    isStarred?: boolean; // Pinned to top of lists
     temperature: Temperature;
     lastInteractionDate?: string; // ISO date string
     lastResponseDate?: string; // ISO date string — last INCOMING interaction
@@ -76,6 +77,7 @@ export interface UpdateLeadInput {
     datingIntention?: DatingIntention;
     originDetails?: string;
     instagramUrl?: string;
+    isStarred?: boolean;
     temperature?: Temperature;
     lastInteractionDate?: string;
     lastResponseDate?: string;

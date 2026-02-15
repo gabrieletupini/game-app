@@ -14,7 +14,11 @@ export default function LoversTable({ onSelectLead }: LoversTableProps) {
 
     const lovers = leads
         .filter(l => l.funnelStage === 'Lover')
-        .sort((a, b) => (b.qualificationScore || 5) - (a.qualificationScore || 5))
+        .sort((a, b) => {
+            if (a.isStarred && !b.isStarred) return -1
+            if (!a.isStarred && b.isStarred) return 1
+            return (b.qualificationScore || 5) - (a.qualificationScore || 5)
+        })
 
     const handleMoveBack = (lead: Lead, e: React.MouseEvent) => {
         e.stopPropagation()

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Search, ArrowUpDown, ChevronDown, ChevronUp, Filter } from 'lucide-react'
+import { Search, ArrowUpDown, ChevronDown, ChevronUp, Filter, Star } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import type { Lead, DatingIntention, FunnelStage, PlatformOrigin } from '../types'
 import { FUNNEL_STAGE_NAMES, PLATFORM_ICONS, INTENTION_CONFIG } from '../utils/constants'
@@ -34,6 +34,7 @@ interface PriorityTableProps {
 
 export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
     const leads = useGameStore(state => state.leads)
+    const updateLead = useGameStore(state => state.updateLead)
 
     // Only show active funnel leads (not Lover/Dead)
     const activeLeads = leads.filter(l =>
@@ -160,8 +161,10 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
             )
         }
 
-        // Sort
+        // Sort — starred always pinned to top
         result = [...result].sort((a, b) => {
+            if (a.isStarred && !b.isStarred) return -1
+            if (!a.isStarred && b.isStarred) return 1
             const dir = sortDir === 'asc' ? 1 : -1
             switch (sortKey) {
                 case 'name':
@@ -516,6 +519,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                         <thead className="bg-slate-50/80 border-b border-slate-100">
                             <tr>
                                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-8">#</th>
+                                <th className="px-2 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider w-8">⭐</th>
                                 <SortHeader label="Name" sortKeyName="name" />
                                 <SortHeader label="Intention" sortKeyName="intention" />
                                 <SortHeader label="Overall" sortKeyName="overall" />
@@ -531,7 +535,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                         <tbody className="divide-y divide-slate-50">
                             {filteredAndSorted.length === 0 ? (
                                 <tr>
-                                    <td colSpan={11} className="px-4 py-8 text-center text-sm text-slate-400">
+                                    <td colSpan={12} className="px-4 py-8 text-center text-sm text-slate-400">
                                         No leads match your filters
                                     </td>
                                 </tr>
@@ -554,6 +558,15 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                             className="hover:bg-slate-50/80 cursor-pointer transition-colors"
                                         >
                                             <td className="px-3 py-3 text-slate-400 text-xs">{idx + 1}</td>
+                                            <td className="px-2 py-3 text-center">
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); updateLead(lead.id, { isStarred: !lead.isStarred }) }}
+                                                    className={`transition ${lead.isStarred ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 hover:text-amber-400'}`}
+                                                    title={lead.isStarred ? 'Unstar' : 'Star to pin on top'}
+                                                >
+                                                    <Star className="w-4 h-4" fill={lead.isStarred ? 'currentColor' : 'none'} />
+                                                </button>
+                                            </td>
                                             <td className="px-3 py-3">
                                                 <div className="flex items-center gap-2.5">
                                                     {lead.profilePhotoUrl ? (

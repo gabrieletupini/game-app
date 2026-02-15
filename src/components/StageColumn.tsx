@@ -44,7 +44,12 @@ export default function StageColumn({ stage, leads, onSelectLead }: StageColumnP
     const config = stageConfig[stage] || stageConfig.Stage1
 
     const sortedLeads = [...leads].sort(
-        (a, b) => (b.qualificationScore || 5) - (a.qualificationScore || 5)
+        (a, b) => {
+            // Starred leads always on top
+            if (a.isStarred && !b.isStarred) return -1
+            if (!a.isStarred && b.isStarred) return 1
+            return (b.qualificationScore || 5) - (a.qualificationScore || 5)
+        }
     )
 
     return (

@@ -21,7 +21,11 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
 
     const deadLeads = leads
         .filter(l => l.funnelStage === 'Dead')
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .sort((a, b) => {
+            if (a.isStarred && !b.isStarred) return -1
+            if (!a.isStarred && b.isStarred) return 1
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        })
 
     const handleRevive = (lead: Lead, e: React.MouseEvent) => {
         e.stopPropagation()

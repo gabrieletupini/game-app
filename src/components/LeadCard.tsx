@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
+import { Star } from 'lucide-react'
 import type { Lead, FunnelStage } from '../types'
 import { PLATFORM_ICONS, INTENTION_CONFIG, FUNNEL_STAGE_NAMES } from '../utils/constants'
 import { getDaysSince } from '../utils/dateHelpers'
@@ -52,7 +53,13 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
         data: { lead },
     })
     const moveLeadToStage = useGameStore(state => state.moveLeadToStage)
+    const updateLead = useGameStore(state => state.updateLead)
     const addToast = useGameStore(state => state.addToast)
+
+    const handleToggleStar = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        updateLead(lead.id, { isStarred: !lead.isStarred })
+    }
 
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
@@ -148,6 +155,14 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
             <div className={`absolute left-0 top-0 bottom-0 w-1 ${getAccentColor(lead.temperature)} rounded-l-xl`} />
 
             <div className="flex items-start gap-3 pl-2">
+                {/* Star toggle */}
+                <button
+                    onClick={handleToggleStar}
+                    className={`absolute top-1.5 right-1.5 p-0.5 rounded-full transition z-10 ${lead.isStarred ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 opacity-0 group-hover:opacity-100 hover:text-amber-400'}`}
+                    title={lead.isStarred ? 'Unstar' : 'Star to pin on top'}
+                >
+                    <Star className="w-3.5 h-3.5" fill={lead.isStarred ? 'currentColor' : 'none'} />
+                </button>
                 {/* Avatar */}
                 <div className="flex-shrink-0">
                     {lead.profilePhotoUrl ? (
@@ -222,6 +237,7 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
 
 // Minimal version for tables
 export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead: Lead) => void }) {
+    const updateLead = useGameStore(state => state.updateLead)
     const daysSince = lead.lastInteractionDate
         ? getDaysSince(lead.lastInteractionDate)
         : getDaysSince(lead.createdAt)
@@ -232,8 +248,15 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
     return (
         <div
             onClick={() => onClick?.(lead)}
-            className="bg-white rounded-xl border border-slate-200 p-4 cursor-pointer lead-card-hover shadow-sm"
+            className="relative bg-white rounded-xl border border-slate-200 p-4 cursor-pointer lead-card-hover shadow-sm group"
         >
+            <button
+                onClick={e => { e.stopPropagation(); updateLead(lead.id, { isStarred: !lead.isStarred }) }}
+                className={`absolute top-2 right-2 p-0.5 rounded-full transition z-10 ${lead.isStarred ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 opacity-0 group-hover:opacity-100 hover:text-amber-400'}`}
+                title={lead.isStarred ? 'Unstar' : 'Star to pin on top'}
+            >
+                <Star className="w-4 h-4" fill={lead.isStarred ? 'currentColor' : 'none'} />
+            </button>
             <div className="flex items-start gap-3">
                 {lead.profilePhotoUrl ? (
                     <img

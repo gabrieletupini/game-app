@@ -149,14 +149,24 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
 
         switch (sortBy) {
             case 'name':
-                return withTemp.sort((a, b) => a.lead.name.localeCompare(b.lead.name))
+                return withTemp.sort((a, b) => {
+                    if (a.lead.isStarred && !b.lead.isStarred) return -1
+                    if (!a.lead.isStarred && b.lead.isStarred) return 1
+                    return a.lead.name.localeCompare(b.lead.name)
+                })
             case 'stage':
                 return withTemp.sort((a, b) => {
+                    if (a.lead.isStarred && !b.lead.isStarred) return -1
+                    if (!a.lead.isStarred && b.lead.isStarred) return 1
                     const order = { Stage1: 0, Stage2: 1, Stage3: 2, Stage4: 3, Lover: 4, Dead: 5 }
                     return (order[a.lead.funnelStage] || 0) - (order[b.lead.funnelStage] || 0)
                 })
             default:
-                return withTemp.sort((a, b) => a.pct - b.pct) // coldest first
+                return withTemp.sort((a, b) => {
+                    if (a.lead.isStarred && !b.lead.isStarred) return -1
+                    if (!a.lead.isStarred && b.lead.isStarred) return 1
+                    return a.pct - b.pct
+                }) // coldest first
         }
     }, [leads, interactions, sortBy])
 
