@@ -11,6 +11,7 @@ import LoversTable from './components/LoversTable'
 import DeadLeadsTable from './components/DeadLeadsTable'
 import AnalyticsView from './components/AnalyticsView'
 import PriorityTable from './components/PriorityTable'
+import TemperatureBoard from './components/TemperatureBoard'
 import WeeklyCheckIn, { shouldShowWeeklyCheckIn } from './components/WeeklyCheckIn'
 import ToastContainer from './components/Toast'
 import { exportLeadsToExcel } from './services/excelService'
@@ -75,6 +76,12 @@ function App() {
                         <StatsBar />
                         <KanbanBoard onSelectLead={setSelectedLead} />
                         <PriorityTable onSelectLead={setSelectedLead} />
+                    </div>
+                )}
+
+                {activeTab === 'temperature' && (
+                    <div className="animate-fade-in">
+                        <TemperatureBoard onSelectLead={setSelectedLead} />
                     </div>
                 )}
 

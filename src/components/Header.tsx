@@ -1,4 +1,4 @@
-import { Plus, LayoutGrid, Heart as HeartIcon, Skull, BarChart3, Menu, X, Upload, Download, ClipboardCheck } from 'lucide-react'
+import { Plus, LayoutGrid, Heart as HeartIcon, Skull, BarChart3, Thermometer, Menu, X, Upload, Download, ClipboardCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { SyncStatus } from '../services/firestoreService'
@@ -50,7 +50,7 @@ function SyncIndicator() {
     )
 }
 
-export type Tab = 'funnel' | 'lovers' | 'dead' | 'analytics'
+export type Tab = 'funnel' | 'temperature' | 'lovers' | 'dead' | 'analytics'
 
 interface HeaderProps {
     activeTab: Tab
@@ -63,6 +63,7 @@ interface HeaderProps {
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'funnel', label: 'Funnel', icon: LayoutGrid },
+    { id: 'temperature', label: 'Temp', icon: Thermometer },
     { id: 'lovers', label: 'Lovers', icon: HeartIcon },
     { id: 'dead', label: 'Dead Leads', icon: Skull },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
