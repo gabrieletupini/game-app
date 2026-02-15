@@ -1,15 +1,23 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Thermometer, HelpCircle, CheckCircle2, XCircle, X, MessageSquare } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import { PLATFORM_ICONS, FUNNEL_STAGE_NAMES } from '../utils/constants'
 import type { Lead } from '../types'
 
-/** Calculate temperature as 0–100% based on days since last incoming response.
- *  100% = just responded, decays exponentially: ~70% at 3 days, ~35% at 7 days, ~0% at 14+ days.
- *  If the lead has a manual override, use that instead. */
+/** Back-calculate a virtual reference date that would produce the given percentage right now.
+ *  pct = 100 * exp(-k * days) → days = -ln(pct/100) / k  */
+function refDateForPercent(pct: number): string {
+    const clamped = Math.max(1, Math.min(100, pct)) // avoid ln(0)
+    const k = 0.173
+    const daysBack = -Math.log(clamped / 100) / k
+    return new Date(Date.now() - daysBack * 86_400_000).toISOString()
+}
+
+/** Calculate temperature as 0–100% based on exponential decay.
+ *  Uses temperatureRefDate (manual anchor) if present, otherwise lastResponseDate.
+ *  Decay continues naturally regardless of how the reference date was set. */
 export function getTemperaturePercent(lead: Lead): number {
-    if (lead.temperatureOverride != null) return Math.max(0, Math.min(100, lead.temperatureOverride))
-    const ref = lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt
+    const ref = lead.temperatureRefDate || lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt
     const days = Math.max(0, (Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24))
     // Exponential decay: half-life ~4 days → k = ln(2)/4 ≈ 0.173
     const pct = 100 * Math.exp(-0.173 * days)
@@ -70,21 +78,23 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
     const [sortBy, setSortBy] = useState<'temp' | 'name' | 'stage'>('temp')
     const [editingNotes, setEditingNotes] = useState<string | null>(null)
     const [notesValue, setNotesValue] = useState('')
-    const barRefs = useRef<Record<string, HTMLDivElement | null>>({})
+    const [editingTemp, setEditingTemp] = useState<string | null>(null)
+    const [tempInputValue, setTempInputValue] = useState('')
 
-    const handleBarClick = useCallback((leadId: string, e: React.MouseEvent<HTMLDivElement>) => {
-        const bar = barRefs.current[leadId]
-        if (!bar) return
+    const handleTempEdit = useCallback((leadId: string, currentPct: number, e: React.MouseEvent) => {
         e.stopPropagation()
-        const rect = bar.getBoundingClientRect()
-        const pct = Math.round(Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100)))
-        updateLead(leadId, { temperatureOverride: pct })
-    }, [updateLead])
+        setEditingTemp(leadId)
+        setTempInputValue(String(currentPct))
+    }, [])
 
-    const handleResetTemp = useCallback((leadId: string, e: React.MouseEvent) => {
-        e.stopPropagation()
-        updateLead(leadId, { temperatureOverride: null } as any)
-    }, [updateLead])
+    const commitTempEdit = useCallback((leadId: string) => {
+        const val = parseInt(tempInputValue, 10)
+        if (!isNaN(val) && val >= 0 && val <= 100) {
+            // Back-calculate a virtual reference date so the decay continues naturally
+            updateLead(leadId, { temperatureRefDate: refDateForPercent(val) })
+        }
+        setEditingTemp(null)
+    }, [tempInputValue, updateLead])
 
     const openNotes = useCallback((leadId: string, current: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -198,8 +208,9 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                         <div className="sm:col-span-2 mt-1 pt-3 border-t border-slate-200">
                             <p className="font-semibold text-slate-700 mb-1">✏️ Manual Editing & Notes</p>
                             <ul className="space-y-1 text-xs">
-                                <li>• <span className="font-bold">Click anywhere on the temperature bar</span> to manually set the temperature percentage</li>
-                                <li>• A <span className="font-bold text-amber-600">"manual"</span> badge will appear — click the ✕ next to it to reset to auto-decay</li>
+                                <li>• <span className="font-bold">Click the percentage number</span> on any lead to type a new temperature value</li>
+                                <li>• The decay algorithm adapts automatically — temperature will <span className="font-bold">continue decaying</span> from your new value</li>
+                                <li>• When the lead sends a new <span className="font-bold">incoming response</span>, it resets to 100% as usual</li>
                                 <li>• Use the <MessageSquare className="w-3 h-3 text-slate-400 inline" /> <span className="font-bold">notes icon</span> to add context about why the temperature changed</li>
                             </ul>
                         </div>
@@ -241,9 +252,8 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
             ) : (
                 <div className="space-y-2">
                     {activeLeads.map(({ lead, pct, checkedIn }) => {
-                        const ref = lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt
+                        const ref = lead.temperatureRefDate || lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt
                         const days = Math.max(0, Math.floor((Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24)))
-                        const isManual = lead.temperatureOverride != null
 
                         return (
                             <div
@@ -291,30 +301,14 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                                             <span className="text-[10px] text-slate-400 hidden sm:inline">
                                                 {PLATFORM_ICONS[lead.platformOrigin]} {FUNNEL_STAGE_NAMES[lead.funnelStage]}
                                             </span>
-                                            {isManual && (
-                                                <span className="inline-flex items-center gap-1 text-[9px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 rounded-full px-1.5 py-0.5">
-                                                    ✏️ manual
-                                                    <button
-                                                        onClick={(e) => handleResetTemp(lead.id, e)}
-                                                        className="hover:text-red-600 ml-0.5"
-                                                        title="Reset to auto-decay"
-                                                    >✕</button>
-                                                </span>
-                                            )}
                                         </div>
-                                        {/* Temperature bar — CLICKABLE to set manually */}
+                                        {/* Temperature bar (display only) */}
                                         <div className="flex items-center gap-2 mt-1.5">
-                                            <div
-                                                ref={el => { barRefs.current[lead.id] = el }}
-                                                className="flex-1 h-3 bg-white/60 rounded-full overflow-hidden cursor-crosshair relative group/bar"
-                                                onClick={(e) => handleBarClick(lead.id, e)}
-                                                title="Click to set temperature manually"
-                                            >
+                                            <div className="flex-1 h-2.5 bg-white/60 rounded-full overflow-hidden">
                                                 <div
                                                     className={`h-full rounded-full bg-gradient-to-r ${getTempBarColor(pct)} transition-all duration-500`}
                                                     style={{ width: `${pct}%` }}
                                                 />
-                                                <div className="absolute inset-0 bg-black/0 group-hover/bar:bg-black/5 rounded-full transition" />
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 mt-1">
@@ -333,11 +327,35 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                                         <MessageSquare className="w-4 h-4" />
                                     </button>
 
-                                    {/* Temperature % */}
-                                    <div className="flex-shrink-0 text-right">
-                                        <div className={`text-lg sm:text-xl font-bold ${getTempColor(pct)}`}>
-                                            {pct}%
-                                        </div>
+                                    {/* Temperature % — CLICKABLE to edit */}
+                                    <div className="flex-shrink-0 text-right" onClick={(e) => e.stopPropagation()}>
+                                        {editingTemp === lead.id ? (
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    autoFocus
+                                                    type="number"
+                                                    min={0}
+                                                    max={100}
+                                                    className="w-14 text-right text-lg font-bold bg-white border-2 border-brand-400 rounded-lg px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    value={tempInputValue}
+                                                    onChange={e => setTempInputValue(e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') commitTempEdit(lead.id)
+                                                        if (e.key === 'Escape') setEditingTemp(null)
+                                                    }}
+                                                    onBlur={() => commitTempEdit(lead.id)}
+                                                />
+                                                <span className="text-sm font-bold text-slate-400">%</span>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={(e) => handleTempEdit(lead.id, pct, e)}
+                                                className={`text-lg sm:text-xl font-bold ${getTempColor(pct)} hover:underline hover:decoration-dotted cursor-text transition`}
+                                                title="Click to edit temperature"
+                                            >
+                                                {pct}%
+                                            </button>
+                                        )}
                                         <div className="text-[10px] text-slate-500">
                                             {getTempLabel(pct)}
                                         </div>

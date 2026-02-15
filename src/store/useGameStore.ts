@@ -386,6 +386,8 @@ export const useGameStore = create<GameStore>()(
                 if (input.direction === 'Incoming') {
                     leadUpdate.lastResponseDate = input.occurredAt;
                     leadUpdate.temperature = 'Hot';
+                    // Clear manual temperature ref so real response date takes over
+                    leadUpdate.temperatureRefDate = null as any;
                     const lead = get().getLeadById(input.leadId);
                     if (lead) {
                         const history = [...(lead.temperatureHistory || [])];
