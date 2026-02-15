@@ -86,7 +86,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     const [editForm, setEditForm] = useState({
         name: lead.name,
         platformOrigin: lead.platformOrigin as PlatformOrigin,
-        communicationPlatform: (lead.communicationPlatform || lead.platformOrigin) as PlatformOrigin,
+        communicationPlatform: (lead.communicationPlatform?.length ? lead.communicationPlatform : [lead.platformOrigin]) as PlatformOrigin[],
         countryOrigin: lead.countryOrigin || '',
         personalityTraits: lead.personalityTraits || '',
         notes: lead.notes || '',
@@ -153,7 +153,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     }
 
     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
-    const commIcon = PLATFORM_ICONS[lead.communicationPlatform || lead.platformOrigin] || '📱'
+    const commPlatforms = lead.communicationPlatform?.length ? lead.communicationPlatform : [lead.platformOrigin]
     const tempEmoji = lead.temperature === 'Hot' ? '🔥' : lead.temperature === 'Warm' ? '🌡️' : '❄️'
     const tempClass = lead.temperature === 'Hot' ? 'temp-hot' : lead.temperature === 'Warm' ? 'temp-warm' : 'temp-cold'
 
@@ -192,9 +192,9 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                     <span className="text-sm text-slate-500" title="Origin Platform">
                                         📍 {platformIcon} {lead.platformOrigin}
                                     </span>
-                                    {lead.communicationPlatform && lead.communicationPlatform !== lead.platformOrigin && (
+                                    {lead.communicationPlatform?.length && !(lead.communicationPlatform.length === 1 && lead.communicationPlatform[0] === lead.platformOrigin) && (
                                         <span className="text-sm text-slate-500" title="Communication Platform">
-                                            • 💬 {commIcon} {lead.communicationPlatform}
+                                            • 💬 {commPlatforms.map(p => `${PLATFORM_ICONS[p] || '📱'} ${p}`).join(', ')}
                                         </span>
                                     )}
                                     {lead.countryOrigin && (
@@ -331,18 +331,26 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="text-xs font-medium text-slate-500 mb-1.5 block">💬 Communication Platform</label>
+                                            <label className="text-xs font-medium text-slate-500 mb-1.5 block">💬 Communication Platform <span className="text-[10px] text-slate-400">(multi)</span></label>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {ALL_PLATFORMS.map(p => (
-                                                    <button
-                                                        key={p}
-                                                        type="button"
-                                                        onClick={() => setEditForm(f => ({ ...f, communicationPlatform: p }))}
-                                                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition ${editForm.communicationPlatform === p ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}
-                                                    >
-                                                        {PLATFORM_ICONS[p] || '📱'} {p}
-                                                    </button>
-                                                ))}
+                                                {ALL_PLATFORMS.map(p => {
+                                                    const selected = editForm.communicationPlatform.includes(p)
+                                                    return (
+                                                        <button
+                                                            key={p}
+                                                            type="button"
+                                                            onClick={() => setEditForm(f => {
+                                                                const updated = selected
+                                                                    ? f.communicationPlatform.filter(x => x !== p)
+                                                                    : [...f.communicationPlatform, p]
+                                                                return { ...f, communicationPlatform: updated.length > 0 ? updated : f.communicationPlatform }
+                                                            })}
+                                                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition ${selected ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                                                        >
+                                                            {PLATFORM_ICONS[p] || '📱'} {p}
+                                                        </button>
+                                                    )
+                                                })}
                                             </div>
                                         </div>
                                         <div className="bg-slate-50 rounded-xl p-3 space-y-3">
@@ -454,7 +462,9 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                             </div>
                                             <div>
                                                 <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">💬 Talking On</h4>
-                                                <p className="text-sm text-slate-700 mt-1">{PLATFORM_ICONS[lead.communicationPlatform || lead.platformOrigin] || '📱'} {lead.communicationPlatform || lead.platformOrigin}</p>
+                                                <p className="text-sm text-slate-700 mt-1">
+                                                    {(lead.communicationPlatform?.length ? lead.communicationPlatform : [lead.platformOrigin]).map(p => `${PLATFORM_ICONS[p] || '📱'} ${p}`).join(', ')}
+                                                </p>
                                             </div>
                                         </div>
 
@@ -535,33 +545,33 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                 {/* Move to Stage — always visible */}
                                 <div className="pt-2">
                                     <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Move to Stage</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {STAGES.map(stage => {
-                                                const isCurrentStage = lead.funnelStage === stage
-                                                const isLover = stage === 'Lover'
-                                                const isDead = stage === 'Dead'
-                                                return (
-                                                    <button
-                                                        key={stage}
-                                                        onClick={() => !isCurrentStage && handleStageChange(stage)}
-                                                        disabled={isCurrentStage}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${isCurrentStage
-                                                            ? 'bg-brand-100 text-brand-700 cursor-default'
-                                                            : isLover
-                                                                ? 'border border-rose-200 text-rose-600 hover:bg-rose-50'
-                                                                : isDead
-                                                                    ? 'border border-slate-200 text-slate-500 hover:bg-slate-50'
-                                                                    : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                                                            }`}
-                                                    >
-                                                        {isLover && <Heart className="w-3 h-3" />}
-                                                        {isDead && <Skull className="w-3 h-3" />}
-                                                        {!isLover && !isDead && <ArrowRight className="w-3 h-3" />}
-                                                        {FUNNEL_STAGE_NAMES[stage] || stage}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {STAGES.map(stage => {
+                                            const isCurrentStage = lead.funnelStage === stage
+                                            const isLover = stage === 'Lover'
+                                            const isDead = stage === 'Dead'
+                                            return (
+                                                <button
+                                                    key={stage}
+                                                    onClick={() => !isCurrentStage && handleStageChange(stage)}
+                                                    disabled={isCurrentStage}
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${isCurrentStage
+                                                        ? 'bg-brand-100 text-brand-700 cursor-default'
+                                                        : isLover
+                                                            ? 'border border-rose-200 text-rose-600 hover:bg-rose-50'
+                                                            : isDead
+                                                                ? 'border border-slate-200 text-slate-500 hover:bg-slate-50'
+                                                                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                        }`}
+                                                >
+                                                    {isLover && <Heart className="w-3 h-3" />}
+                                                    {isDead && <Skull className="w-3 h-3" />}
+                                                    {!isLover && !isDead && <ArrowRight className="w-3 h-3" />}
+                                                    {FUNNEL_STAGE_NAMES[stage] || stage}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         )}

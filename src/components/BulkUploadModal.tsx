@@ -356,7 +356,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                                         </td>
                                                         <td className="px-3 py-2 font-medium text-slate-900 whitespace-nowrap">{lead.name || '—'}</td>
                                                         <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{lead.platformOrigin}</td>
-                                                        <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{lead.communicationPlatform || lead.platformOrigin}</td>
+                                                        <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{(lead.communicationPlatform || [lead.platformOrigin]).join(', ')}</td>
                                                         <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{lead.countryOrigin || '—'}</td>
                                                         <td className="px-3 py-2 text-slate-600">{lead.qualificationScore}</td>
                                                         <td className="px-3 py-2 text-slate-600">{lead.aestheticsScore}</td>

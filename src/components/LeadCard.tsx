@@ -107,8 +107,7 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
         : getDaysSince(lead.createdAt)
 
     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
-    const commPlatform = lead.communicationPlatform || lead.platformOrigin
-    const commIcon = PLATFORM_ICONS[commPlatform] || '📱'
+    const commPlatforms = lead.communicationPlatform?.length ? lead.communicationPlatform : [lead.platformOrigin]
 
     return (
         <div
@@ -181,13 +180,13 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
                         <span className="text-xs text-slate-500" title={`Origin: ${lead.platformOrigin}`}>
                             📍{platformIcon}
                         </span>
-                        {commPlatform !== lead.platformOrigin && (
-                            <span className="text-xs text-slate-500" title={`Talking on: ${commPlatform}`}>
-                                💬{commIcon}
+                        {!(commPlatforms.length === 1 && commPlatforms[0] === lead.platformOrigin) && (
+                            <span className="text-xs text-slate-500" title={`Talking on: ${commPlatforms.join(', ')}`}>
+                                💬{commPlatforms.map(p => PLATFORM_ICONS[p] || '📱').join('')}
                             </span>
                         )}
                         <span className="text-xs text-slate-500">
-                            {lead.platformOrigin}{commPlatform !== lead.platformOrigin ? ` → ${commPlatform}` : ''}
+                            {lead.platformOrigin}{!(commPlatforms.length === 1 && commPlatforms[0] === lead.platformOrigin) ? ` → ${commPlatforms.join(', ')}` : ''}
                         </span>
                         {lead.countryOrigin && (
                             <span className="text-xs text-slate-400">• {lead.countryOrigin}</span>
@@ -220,8 +219,7 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
         : getDaysSince(lead.createdAt)
 
     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
-    const commPlatform = lead.communicationPlatform || lead.platformOrigin
-    const commIcon = PLATFORM_ICONS[commPlatform] || '📱'
+    const commPlatforms = lead.communicationPlatform?.length ? lead.communicationPlatform : [lead.platformOrigin]
 
     return (
         <div
@@ -250,7 +248,7 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
                     </div>
                     <p className="text-sm text-slate-500 mt-0.5">
                         📍{platformIcon} {lead.platformOrigin}
-                        {commPlatform !== lead.platformOrigin && ` → 💬${commIcon} ${commPlatform}`}
+                        {!(commPlatforms.length === 1 && commPlatforms[0] === lead.platformOrigin) && ` → 💬 ${commPlatforms.join(', ')}`}
                         {lead.countryOrigin && ` • ${lead.countryOrigin}`}
                     </p>
                     <div className="flex items-center justify-between mt-2">

@@ -62,7 +62,7 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
             'ID': lead.id,
             'Name': lead.name,
             'Origin Platform': lead.platformOrigin,
-            'Communication Platform': lead.communicationPlatform || lead.platformOrigin,
+            'Communication Platform': (lead.communicationPlatform || [lead.platformOrigin]).join(', '),
             'Country': lead.countryOrigin || '',
             'Personality Traits': lead.personalityTraits || '',
             'Notes': lead.notes || '',
@@ -187,7 +187,7 @@ export function downloadImportTemplate() {
         {
             'Name': 'Emma Wilson',
             'Origin Platform': 'Offline',
-            'Communication Platform': 'WhatsApp',
+            'Communication Platform': 'WhatsApp, Instagram',
             'Country': 'UK',
             'Personality Traits': 'Ambitious, witty',
             'Notes': 'Strong connection, seeing regularly',
@@ -265,7 +265,7 @@ export function downloadImportTemplate() {
     const helpRows = [
         { Field: 'Name', 'Input Type': '✏️ FREE TEXT', Required: 'Yes', Description: 'Name of the person', 'Valid Options / Format': 'Any text' },
         { Field: 'Origin Platform', 'Input Type': '🔘 SELECT', Required: 'No', Description: 'Where you found/met her', 'Valid Options / Format': VALID_PLATFORMS.join(', ') },
-        { Field: 'Communication Platform', 'Input Type': '🔘 SELECT', Required: 'No', Description: 'Where you\'re currently talking', 'Valid Options / Format': VALID_PLATFORMS.join(', ') + ' (defaults to Origin Platform)' },
+        { Field: 'Communication Platform', 'Input Type': '🔘 MULTI-SELECT', Required: 'No', Description: 'Where you\'re currently talking (comma-separated for multiple)', 'Valid Options / Format': VALID_PLATFORMS.join(', ') + ' (e.g. "WhatsApp, Instagram")' },
         { Field: 'Country', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Country of origin', 'Valid Options / Format': 'Any text (e.g. Italy, USA, Brazil)' },
         { Field: 'Personality Traits', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Comma-separated personality traits', 'Valid Options / Format': 'Any text (e.g. "Funny, smart, outgoing")' },
         { Field: 'Notes', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Any notes to remember about her', 'Valid Options / Format': 'Any text' },
@@ -338,7 +338,7 @@ export function downloadImportTemplate() {
 export interface ParsedLead {
     name: string
     platformOrigin: PlatformOrigin
-    communicationPlatform: PlatformOrigin
+    communicationPlatform: PlatformOrigin[]
     countryOrigin: string
     personalityTraits: string
     notes: string
@@ -447,9 +447,18 @@ export function parseExcelFile(file: File): Promise<ParseResult> {
                     const lead: ParsedLead = {
                         name,
                         platformOrigin: parsedOriginPlatform,
-                        communicationPlatform: parsePlatform(
-                            row['Communication Platform'] ?? row['communication platform'] ?? row['Comm Platform'] ?? row['Talking On'] ?? ''
-                        ) || parsedOriginPlatform,
+                        communicationPlatform: (() => {
+                            const raw = normalizeString(
+                                row['Communication Platform'] ?? row['communication platform'] ?? row['Comm Platform'] ?? row['Talking On'] ?? ''
+                            )
+                            if (!raw) return [parsedOriginPlatform]
+                            const parts = raw.split(',').map(s => s.trim()).filter(Boolean)
+                            const parsed = parts.map(s => {
+                                const match = VALID_PLATFORMS.find(p => p.toLowerCase() === s.toLowerCase())
+                                return match || 'Other' as PlatformOrigin
+                            })
+                            return parsed.length > 0 ? parsed : [parsedOriginPlatform]
+                        })(),
                         countryOrigin: normalizeString(
                             row['Country'] ?? row['country'] ?? row['COUNTRY'] ?? row['Country Origin'] ?? ''
                         ),
@@ -509,7 +518,7 @@ export function parsedLeadsToCreateInputs(parsed: ParsedLead[]): CreateLeadInput
         .map(l => ({
             name: l.name,
             platformOrigin: l.platformOrigin,
-            communicationPlatform: l.communicationPlatform || l.platformOrigin,
+            communicationPlatform: l.communicationPlatform.length > 0 ? l.communicationPlatform : [l.platformOrigin],
             countryOrigin: l.countryOrigin || undefined,
             personalityTraits: l.personalityTraits || undefined,
             notes: l.notes || undefined,

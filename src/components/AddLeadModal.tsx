@@ -29,7 +29,7 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
     const [form, setForm] = useState<CreateLeadInput>({
         name: '',
         platformOrigin: 'Tinder',
-        communicationPlatform: 'WhatsApp',
+        communicationPlatform: ['WhatsApp'],
         countryOrigin: '',
         personalityTraits: '',
         notes: '',
@@ -96,7 +96,7 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
         setForm({
             name: '',
             platformOrigin: 'Tinder',
-            communicationPlatform: 'WhatsApp',
+            communicationPlatform: ['WhatsApp'],
             countryOrigin: '',
             personalityTraits: '',
             notes: '',
@@ -209,22 +209,31 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                         {/* Communication Platform */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1.5">💬 Communication Platform</label>
-                            <p className="text-[11px] text-slate-400 mb-2">Where are you talking now?</p>
+                            <p className="text-[11px] text-slate-400 mb-2">Where are you talking now? (select one or more)</p>
                             <div className="grid grid-cols-4 gap-2">
-                                {PLATFORMS.map(platform => (
-                                    <button
-                                        key={platform}
-                                        type="button"
-                                        onClick={() => setForm(f => ({ ...f, communicationPlatform: platform }))}
-                                        className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${form.communicationPlatform === platform
-                                            ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                                            }`}
-                                    >
-                                        <span className="text-lg">{PLATFORM_EMOJIS[platform]}</span>
-                                        {platform}
-                                    </button>
-                                ))}
+                                {PLATFORMS.map(platform => {
+                                    const selected = (form.communicationPlatform || []).includes(platform)
+                                    return (
+                                        <button
+                                            key={platform}
+                                            type="button"
+                                            onClick={() => setForm(f => {
+                                                const current = f.communicationPlatform || []
+                                                const updated = selected
+                                                    ? current.filter(p => p !== platform)
+                                                    : [...current, platform]
+                                                return { ...f, communicationPlatform: updated.length > 0 ? updated : current }
+                                            })}
+                                            className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${selected
+                                                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                                                }`}
+                                        >
+                                            <span className="text-lg">{PLATFORM_EMOJIS[platform]}</span>
+                                            {platform}
+                                        </button>
+                                    )
+                                })}
                             </div>
                         </div>
 

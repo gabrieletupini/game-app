@@ -23,6 +23,21 @@ import { localStorageService } from '../services/localStorage';
 import { firestoreService } from '../services/firestoreService';
 import { v4 as uuidv4 } from 'uuid';
 
+// Migrate old data: convert communicationPlatform from string to array
+function normalizeLead(lead: Lead): Lead {
+    const cp = lead.communicationPlatform as unknown;
+    if (typeof cp === 'string') {
+        return { ...lead, communicationPlatform: cp ? [cp as Lead['platformOrigin']] : [lead.platformOrigin] };
+    }
+    if (!Array.isArray(cp) || cp.length === 0) {
+        return { ...lead, communicationPlatform: [lead.platformOrigin] };
+    }
+    return lead;
+}
+function normalizeLeads(leads: Lead[]): Lead[] {
+    return leads.map(normalizeLead);
+}
+
 // Default settings
 const DEFAULT_SETTINGS: AppSettings = {
     user: {},
@@ -139,7 +154,7 @@ export const useGameStore = create<GameStore>()(
             const cachedSettings = localStorageService.getSettings() || DEFAULT_SETTINGS;
 
             set({
-                leads: cachedLeads,
+                leads: normalizeLeads(cachedLeads),
                 interactions: cachedInteractions,
                 settings: cachedSettings,
                 loading: { isLoading: false },
@@ -149,7 +164,7 @@ export const useGameStore = create<GameStore>()(
             // Then hydrate from Firestore (async)
             firestoreService.loadAll().then(data => {
                 set({
-                    leads: data.leads || [],
+                    leads: normalizeLeads(data.leads || []),
                     interactions: data.interactions || [],
                     settings: data.settings || DEFAULT_SETTINGS,
                 });
@@ -160,7 +175,7 @@ export const useGameStore = create<GameStore>()(
             // Subscribe to real-time updates from other devices/tabs
             firestoreService.subscribeToChanges((data) => {
                 set({
-                    leads: data.leads || [],
+                    leads: normalizeLeads(data.leads || []),
                     interactions: data.interactions || [],
                     settings: data.settings || get().settings,
                 });
@@ -176,7 +191,7 @@ export const useGameStore = create<GameStore>()(
                     name: input.name,
                     profilePhotoUrl: input.profilePhotoUrl,
                     platformOrigin: input.platformOrigin,
-                    communicationPlatform: input.communicationPlatform || input.platformOrigin,
+                    communicationPlatform: input.communicationPlatform?.length ? input.communicationPlatform : [input.platformOrigin],
                     countryOrigin: input.countryOrigin,
                     personalityTraits: input.personalityTraits,
                     notes: input.notes,

@@ -73,7 +73,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
             result = result.filter(l =>
                 l.name.toLowerCase().includes(q) ||
                 l.platformOrigin.toLowerCase().includes(q) ||
-                (l.communicationPlatform || '').toLowerCase().includes(q) ||
+                (l.communicationPlatform || []).some(p => p.toLowerCase().includes(q)) ||
                 (l.countryOrigin || '').toLowerCase().includes(q) ||
                 (l.personalityTraits || '').toLowerCase().includes(q)
             )
@@ -108,7 +108,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                 case 'platform':
                     return dir * a.platformOrigin.localeCompare(b.platformOrigin)
                 case 'commPlatform':
-                    return dir * (a.communicationPlatform || a.platformOrigin).localeCompare(b.communicationPlatform || b.platformOrigin)
+                    return dir * ((a.communicationPlatform?.[0] || a.platformOrigin).localeCompare(b.communicationPlatform?.[0] || b.platformOrigin))
                 default:
                     return 0
             }
@@ -285,8 +285,8 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                     const intention = lead.datingIntention || 'Undecided'
                                     const intentionCfg = INTENTION_CONFIG[intention]
                                     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
-                                    const commPlatform = lead.communicationPlatform || lead.platformOrigin
-                                    const commPlatformIcon = PLATFORM_ICONS[commPlatform] || '📱'
+                                    const commPlatforms = lead.communicationPlatform?.length ? lead.communicationPlatform : [lead.platformOrigin]
+                                    const commPlatformIcons = commPlatforms.map(p => PLATFORM_ICONS[p] || '📱')
 
                                     return (
                                         <tr
@@ -335,7 +335,9 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                                 {platformIcon} {lead.platformOrigin}
                                             </td>
                                             <td className="px-3 py-3 text-slate-600 whitespace-nowrap">
-                                                {commPlatformIcon} {commPlatform}
+                                                {commPlatforms.map((p, i) => (
+                                                    <span key={p}>{i > 0 ? ', ' : ''}{commPlatformIcons[i]} {p}</span>
+                                                ))}
                                             </td>
                                             <td className="px-3 py-3">
                                                 <span className={`text-xs font-medium ${daysSince > 7 ? 'text-red-500' : daysSince > 3 ? 'text-amber-500' : 'text-emerald-500'
