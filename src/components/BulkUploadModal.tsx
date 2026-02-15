@@ -235,7 +235,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                         <div>
                                             <p className="font-semibold text-amber-700 mb-1">📱 Platform:</p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {['🔥 Tinder', '💛 Bumble', '📸 Instagram', '👥 Facebook', '💬 WhatsApp', '🌍 Offline', '📱 Other'].map(p => (
+                                                {['🔥 Tinder', '💛 Bumble', '� Hinge', '�📸 Instagram', '👥 Facebook', '💬 WhatsApp', '🌍 Offline', '📱 Other'].map(p => (
                                                     <span key={p} className="bg-white border border-amber-200 text-amber-800 px-2 py-0.5 rounded-md font-medium">{p}</span>
                                                 ))}
                                             </div>

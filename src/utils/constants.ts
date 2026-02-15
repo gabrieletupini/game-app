@@ -34,6 +34,7 @@ export const FUNNEL_STAGE_NAMES = {
 export const PLATFORM_ICONS = {
     Tinder: '🔥',
     Bumble: '💛',
+    Hinge: '💜',
     Instagram: '📸',
     Facebook: '👥',
     WhatsApp: '💬',

@@ -8,7 +8,7 @@ const VALID_INTENTIONS: DatingIntention[] = ['Short Term', 'Long Term', 'Long Te
 
 // ── Valid options ──
 
-const VALID_PLATFORMS: PlatformOrigin[] = ['Tinder', 'Bumble', 'Instagram', 'Facebook', 'WhatsApp', 'Offline', 'Other']
+const VALID_PLATFORMS: PlatformOrigin[] = ['Tinder', 'Bumble', 'Hinge', 'Instagram', 'Facebook', 'WhatsApp', 'Offline', 'Other']
 const VALID_STAGES: FunnelStage[] = ['Stage1', 'Stage2', 'Stage3', 'Stage4', 'Lover', 'Dead']
 
 const FRIENDLY_STAGES = [

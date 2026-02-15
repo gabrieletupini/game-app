@@ -5,6 +5,7 @@ export type FunnelStage = 'Stage1' | 'Stage2' | 'Stage3' | 'Stage4' | 'Lover' | 
 export type PlatformOrigin =
     | 'Tinder'
     | 'Bumble'
+    | 'Hinge'
     | 'Instagram'
     | 'Facebook'
     | 'WhatsApp'

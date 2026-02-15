@@ -14,6 +14,7 @@ const PLATFORMS: PlatformOrigin[] = ['Tinder', 'Bumble', 'Instagram', 'Facebook'
 const PLATFORM_EMOJIS: Record<PlatformOrigin, string> = {
     Tinder: '🔥',
     Bumble: '💛',
+    Hinge: '💜',
     Instagram: '📸',
     Facebook: '👥',
     WhatsApp: '💬',
