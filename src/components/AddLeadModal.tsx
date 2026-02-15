@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 import { X, Upload, Trash2 } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
@@ -42,11 +42,8 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
 
     const [photoPreview, setPhotoPreview] = useState<string | null>(null)
 
-    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    const processImageFile = useCallback((file: File) => {
+        if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'].includes(file.type)) {
             return
         }
         if (file.size > 5 * 1024 * 1024) {
@@ -60,7 +57,25 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
             setForm(f => ({ ...f, profilePhotoUrl: base64 }))
         }
         reader.readAsDataURL(file)
+    }, [])
+
+    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) processImageFile(file)
     }
+
+    const handlePaste = useCallback((e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items
+        if (!items) return
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault()
+                const file = item.getAsFile()
+                if (file) processImageFile(file)
+                return
+            }
+        }
+    }, [processImageFile])
 
     const removePhoto = () => {
         setPhotoPreview(null)
@@ -115,7 +130,7 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                     </div>
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                    <form onSubmit={handleSubmit} onPaste={handlePaste} className="p-6 space-y-5">
                         {/* Photo Upload */}
                         <div className="flex items-center gap-4">
                             {photoPreview ? (
@@ -134,17 +149,16 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                                     </button>
                                 </div>
                             ) : (
-                                <button
-                                    type="button"
+                                <div
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="w-16 h-16 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-brand-400 hover:text-brand-500 transition"
+                                    className="w-16 h-16 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-brand-400 hover:text-brand-500 transition cursor-pointer"
                                 >
                                     <Upload className="w-5 h-5" />
-                                </button>
+                                </div>
                             )}
                             <div>
                                 <p className="text-sm font-medium text-slate-700">Profile Photo</p>
-                                <p className="text-xs text-slate-400">JPG, PNG or WebP (max 5MB)</p>
+                                <p className="text-xs text-slate-400">Click to upload or <span className="font-semibold text-brand-500">⌘V paste</span> from clipboard</p>
                             </div>
                             <input
                                 ref={fileInputRef}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react'
 import {
     X,
@@ -14,6 +14,7 @@ import {
     Skull,
     Save,
     Clock,
+    Upload,
 } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import type { Lead, FunnelStage, DatingIntention, InteractionType, InteractionDirection, PlatformOrigin } from '../types'
@@ -52,6 +53,35 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     const [activeSection, setActiveSection] = useState<'details' | 'interactions'>('details')
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+    // Photo editing
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [editPhoto, setEditPhoto] = useState<string | null>(null) // null = unchanged
+
+    const processImageFile = useCallback((file: File) => {
+        if (!file.type.startsWith('image/')) return
+        if (file.size > 5 * 1024 * 1024) return
+        const reader = new FileReader()
+        reader.onload = () => {
+            const base64 = reader.result as string
+            setEditPhoto(base64)
+        }
+        reader.readAsDataURL(file)
+    }, [])
+
+    const handlePaste = useCallback((e: React.ClipboardEvent) => {
+        if (!isEditing) return
+        const items = e.clipboardData?.items
+        if (!items) return
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault()
+                const file = item.getAsFile()
+                if (file) processImageFile(file)
+                return
+            }
+        }
+    }, [isEditing, processImageFile])
+
     // Edit form state
     const [editForm, setEditForm] = useState({
         name: lead.name,
@@ -80,6 +110,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     const handleSaveEdit = () => {
         updateLead(lead.id, {
             name: editForm.name.trim(),
+            profilePhotoUrl: editPhoto !== null ? editPhoto : undefined, // only update if changed
             platformOrigin: editForm.platformOrigin,
             communicationPlatform: editForm.communicationPlatform,
             countryOrigin: editForm.countryOrigin.trim() || undefined,
@@ -91,6 +122,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             originDetails: editForm.originDetails.trim() || undefined,
         })
         setIsEditing(false)
+        setEditPhoto(null)
         addToast({ type: 'success', title: 'Lead Updated', message: `${editForm.name} has been updated`, duration: 2000 })
     }
 
@@ -130,7 +162,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             <DialogBackdrop className="fixed inset-0 bg-black/40 backdrop-blur-sm modal-backdrop" />
 
             <div className="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
-                <DialogPanel className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto modal-content">
+                <DialogPanel onPaste={handlePaste} className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto modal-content">
                     {/* Header */}
                     <div className="relative px-6 pt-6 pb-4">
                         <button
@@ -227,6 +259,43 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                 {isEditing ? (
                                     /* Edit Mode */
                                     <>
+                                        {/* Photo edit */}
+                                        <div className="flex items-center gap-4">
+                                            {(editPhoto || lead.profilePhotoUrl) ? (
+                                                <div className="relative group">
+                                                    <img
+                                                        src={editPhoto || lead.profilePhotoUrl}
+                                                        alt={lead.name}
+                                                        className="w-14 h-14 rounded-full object-cover ring-2 ring-brand-200 shadow"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEditPhoto('')}
+                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="w-14 h-14 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-brand-400 hover:text-brand-500 transition cursor-pointer"
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="text-xs font-medium text-slate-600">Profile Photo</p>
+                                                <p className="text-[11px] text-slate-400">Click to upload or <span className="font-semibold text-brand-500">⌘V paste</span></p>
+                                            </div>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp"
+                                                onChange={e => { const f = e.target.files?.[0]; if (f) processImageFile(f) }}
+                                                className="hidden"
+                                            />
+                                        </div>
                                         <div>
                                             <label className="text-xs font-medium text-slate-500">Name</label>
                                             <input
