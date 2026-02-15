@@ -223,14 +223,11 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                             </ul>
                         </div>
                         <div className="sm:col-span-2 mt-1 pt-3 border-t border-slate-200">
-                            <p className="font-semibold text-slate-700 mb-1">✏️ Manual Editing & Notes</p>
+                            <p className="font-semibold text-slate-700 mb-1">✏️ Everything is Editable</p>
                             <ul className="space-y-1 text-xs">
-                                <li>• <span className="font-bold">Click the percentage number</span> on any lead to type a new temperature value</li>
-                                <li>• The decay algorithm adapts automatically — temperature will <span className="font-bold">continue decaying</span> from your new value</li>
-                                <li>• <span className="font-bold">Click the "Xd since last response"</span> text to manually correct the days counter</li>
-                                <li>• Temperature % and days since response are <span className="font-bold">tracked independently</span> — editing one doesn't affect the other</li>
-                                <li>• When the lead sends a new <span className="font-bold">incoming response</span>, both reset automatically</li>
-                                <li>• Use the <MessageSquare className="w-3 h-3 text-slate-400 inline" /> <span className="font-bold">notes icon</span> to add context about why the temperature changed</li>
+                                <li>• Click the <span className="font-bold">percentage</span> or <span className="font-bold">days</span> to edit them — decay continues from your new value</li>
+                                <li>• Click <MessageSquare className="w-3 h-3 text-slate-400 inline" /> to add <span className="font-bold">notes</span> (e.g. why it got cold)</li>
+                                <li>• An <span className="font-bold">incoming response</span> resets everything automatically</li>
                             </ul>
                         </div>
                     </div>
