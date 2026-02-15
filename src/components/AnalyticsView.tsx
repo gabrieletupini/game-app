@@ -157,11 +157,6 @@ export default function AnalyticsView() {
                     )}
                 </div>
 
-                {/* Origin Distribution */}
-                <OriginChart />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Temperature Distribution */}
                 <div className="bg-white rounded-2xl border border-slate-200 p-6">
                     <h3 className="text-sm font-bold text-slate-900 mb-4">Temperature Distribution</h3>
@@ -192,35 +187,38 @@ export default function AnalyticsView() {
                         </div>
                     )}
                 </div>
+            </div>
 
-                {/* Activity Summary */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                    <h3 className="text-sm font-bold text-slate-900 mb-4">Activity Summary</h3>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between py-3 border-b border-slate-100">
-                            <span className="text-sm text-slate-600">Total Leads</span>
-                            <span className="text-sm font-bold text-slate-900">{stats.total}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-3 border-b border-slate-100">
-                            <span className="text-sm text-slate-600">Active Leads</span>
-                            <span className="text-sm font-bold text-slate-900">{activeLeads.length}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-3 border-b border-slate-100">
-                            <span className="text-sm text-slate-600">Conversion Rate</span>
-                            <span className="text-sm font-bold text-emerald-600">{stats.conversionRate.toFixed(1)}%</span>
-                        </div>
-                        <div className="flex items-center justify-between py-3 border-b border-slate-100">
-                            <span className="text-sm text-slate-600">Interactions This Week</span>
-                            <span className="text-sm font-bold text-slate-900">{interactionsThisWeek}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-3 border-b border-slate-100">
-                            <span className="text-sm text-slate-600">Dead Leads</span>
-                            <span className="text-sm font-bold text-slate-500">{stats.dead}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-3">
-                            <span className="text-sm text-slate-600">Total Interactions</span>
-                            <span className="text-sm font-bold text-slate-900">{interactions.length}</span>
-                        </div>
+            {/* Origin Analytics — full width section */}
+            <OriginChart />
+
+            {/* Activity Summary */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <h3 className="text-sm font-bold text-slate-900 mb-4">Activity Summary</h3>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                        <span className="text-sm text-slate-600">Total Leads</span>
+                        <span className="text-sm font-bold text-slate-900">{stats.total}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                        <span className="text-sm text-slate-600">Active Leads</span>
+                        <span className="text-sm font-bold text-slate-900">{activeLeads.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                        <span className="text-sm text-slate-600">Conversion Rate</span>
+                        <span className="text-sm font-bold text-emerald-600">{stats.conversionRate.toFixed(1)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                        <span className="text-sm text-slate-600">Interactions This Week</span>
+                        <span className="text-sm font-bold text-slate-900">{interactionsThisWeek}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                        <span className="text-sm text-slate-600">Dead Leads</span>
+                        <span className="text-sm font-bold text-slate-500">{stats.dead}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3">
+                        <span className="text-sm text-slate-600">Total Interactions</span>
+                        <span className="text-sm font-bold text-slate-900">{interactions.length}</span>
                     </div>
                 </div>
             </div>
