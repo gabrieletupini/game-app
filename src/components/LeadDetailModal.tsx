@@ -354,7 +354,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                             </div>
                                             <div>
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-xs font-medium text-slate-500">🧠 Qualification</label>
+                                                    <label className="text-xs font-medium text-slate-500">🧠 Personality</label>
                                                     <span className="text-xs font-bold text-brand-600">{editForm.qualificationScore}/10</span>
                                                 </div>
                                                 <input
@@ -474,7 +474,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-slate-500">🧠 Qualification</span>
+                                                    <span className="text-xs text-slate-500">🧠 Personality</span>
                                                     <span className="text-xs font-bold text-brand-600">{lead.qualificationScore || 5}/10</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">

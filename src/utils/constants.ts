@@ -94,7 +94,7 @@ export const TEMPERATURE_THRESHOLDS = {
     RECENT_INTERACTION_WINDOW_DAYS: 7
 } as const;
 
-// Qualification score display
+// Personality score display
 export const QUALIFICATION_DISPLAY = {
     1: { stars: '⭐', color: 'text-red-500', label: 'Low' },
     2: { stars: '⭐', color: 'text-red-500', label: 'Low' },

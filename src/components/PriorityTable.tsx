@@ -144,7 +144,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                         <Filter className="w-5 h-5 text-brand-500" />
                         Priority Board
                     </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">Filter by intention &amp; qualification • Sort by any column • Click a row to open</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Filter by intention &amp; personality • Sort by any column • Click a row to open</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {activeFilters > 0 && (
@@ -201,7 +201,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
 
                 {/* Row 2: Qualification range filter */}
                 <div>
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">🧠 Qualification Score Range</p>
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">🧠 Personality Score Range</p>
                     <div className="flex flex-wrap items-center gap-2">
                         {QUAL_RANGES.map(range => {
                             const isActive = qualFilter === range.key
@@ -261,7 +261,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                 <SortHeader label="Name" sortKeyName="name" />
                                 <SortHeader label="Intention" sortKeyName="intention" />
                                 <SortHeader label="Overall" sortKeyName="overall" />
-                                <SortHeader label="🧠 Qual" sortKeyName="qualification" />
+                                <SortHeader label="🧠 Pers" sortKeyName="qualification" />
                                 <SortHeader label="✨ Aesth" sortKeyName="aesthetics" />
                                 <SortHeader label="Stage" sortKeyName="stage" />
                                 <SortHeader label="📍 Origin" sortKeyName="platform" />

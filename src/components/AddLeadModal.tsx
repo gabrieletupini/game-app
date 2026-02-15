@@ -249,10 +249,10 @@ export default function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                                 </span>
                             </div>
 
-                            {/* Qualification Score */}
+                            {/* Personality Score */}
                             <div>
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <label className="text-sm font-medium text-slate-700">🧠 Qualification</label>
+                                    <label className="text-sm font-medium text-slate-700">🧠 Personality</label>
                                     <span className="text-xs font-bold text-brand-600">{form.qualificationScore}/10</span>
                                 </div>
                                 <input

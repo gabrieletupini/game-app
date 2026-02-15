@@ -66,7 +66,7 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
             'Country': lead.countryOrigin || '',
             'Personality Traits': lead.personalityTraits || '',
             'Notes': lead.notes || '',
-            'Qualification Score (1-10)': qual,
+            'Personality Score (1-10)': qual,
             'Aesthetics Score (1-10)': aes,
             'Overall Score': +((qual + aes) / 2).toFixed(1),
             'Dating Intention': lead.datingIntention || 'Undecided',
@@ -93,7 +93,7 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
         { wch: 16 },  // Country
         { wch: 30 },  // Personality
         { wch: 30 },  // Notes
-        { wch: 14 },  // Qualification Score
+        { wch: 14 },  // Personality Score
         { wch: 14 },  // Aesthetics Score
         { wch: 12 },  // Overall Score
         { wch: 16 },  // Dating Intention
@@ -118,7 +118,7 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
             'Country': 'USA',
             'Personality Traits': 'Outgoing, loves hiking',
             'Notes': 'Met at coffee shop',
-            'Qualification Score (1-10)': 7,
+            'Personality Score (1-10)': 7,
             'Aesthetics Score (1-10)': 8,
             'Funnel Stage': 'Initial Contact',
             'Origin / How We Met': 'Matched on Tinder',
@@ -152,7 +152,7 @@ export function downloadImportTemplate() {
             'Country': 'USA',
             'Personality Traits': 'Outgoing, loves hiking',
             'Notes': 'Met through mutual friend',
-            'Qualification Score (1-10)': 7,
+            'Personality Score (1-10)': 7,
             'Aesthetics Score (1-10)': 8,
             'Dating Intention': 'Short Term',
             'Funnel Stage': 'Initial Contact',
@@ -165,7 +165,7 @@ export function downloadImportTemplate() {
             'Country': 'Spain',
             'Personality Traits': 'Creative, photographer',
             'Notes': 'DM conversation about travel',
-            'Qualification Score (1-10)': 8,
+            'Personality Score (1-10)': 8,
             'Aesthetics Score (1-10)': 9,
             'Dating Intention': 'Long Term',
             'Funnel Stage': 'Qualified Interest',
@@ -178,7 +178,7 @@ export function downloadImportTemplate() {
             'Country': 'Italy',
             'Personality Traits': 'Chill, foodie',
             'Notes': 'Had coffee last week',
-            'Qualification Score (1-10)': 7,
+            'Personality Score (1-10)': 7,
             'Aesthetics Score (1-10)': 8,
             'Dating Intention': 'Casual',
             'Funnel Stage': 'Real-World Interaction',
@@ -191,7 +191,7 @@ export function downloadImportTemplate() {
             'Country': 'UK',
             'Personality Traits': 'Ambitious, witty',
             'Notes': 'Strong connection, seeing regularly',
-            'Qualification Score (1-10)': 9,
+            'Personality Score (1-10)': 9,
             'Aesthetics Score (1-10)': 9,
             'Dating Intention': 'Long Term',
             'Funnel Stage': 'Intimacy & Connection',
@@ -204,7 +204,7 @@ export function downloadImportTemplate() {
             'Country': 'Brazil',
             'Personality Traits': 'Fun, spontaneous',
             'Notes': 'Together for 3 months',
-            'Qualification Score (1-10)': 9,
+            'Personality Score (1-10)': 9,
             'Aesthetics Score (1-10)': 10,
             'Dating Intention': 'Long Term',
             'Funnel Stage': 'Lover',
@@ -217,7 +217,7 @@ export function downloadImportTemplate() {
             'Country': 'Canada',
             'Personality Traits': 'Quiet, bookworm',
             'Notes': 'Stopped replying after 2nd date',
-            'Qualification Score (1-10)': 6,
+            'Personality Score (1-10)': 6,
             'Aesthetics Score (1-10)': 7,
             'Dating Intention': 'Exploring',
             'Funnel Stage': 'Dead',
@@ -233,7 +233,7 @@ export function downloadImportTemplate() {
         { wch: 16 }, // Country
         { wch: 30 }, // Personality Traits
         { wch: 30 }, // Notes
-        { wch: 14 }, // Qualification
+        { wch: 14 }, // Personality
         { wch: 14 }, // Aesthetics
         { wch: 18 }, // Dating Intention
         { wch: 26 }, // Funnel Stage
@@ -269,7 +269,7 @@ export function downloadImportTemplate() {
         { Field: 'Country', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Country of origin', 'Valid Options / Format': 'Any text (e.g. Italy, USA, Brazil)' },
         { Field: 'Personality Traits', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Comma-separated personality traits', 'Valid Options / Format': 'Any text (e.g. "Funny, smart, outgoing")' },
         { Field: 'Notes', 'Input Type': '✏️ FREE TEXT', Required: 'No', Description: 'Any notes to remember about her', 'Valid Options / Format': 'Any text' },
-        { Field: 'Qualification Score', 'Input Type': '🔢 NUMBER', Required: 'No', Description: 'Personality / vibe / compatibility score', 'Valid Options / Format': 'Number 1 to 10 (defaults to 5)' },
+        { Field: 'Personality Score', 'Input Type': '🔢 NUMBER', Required: 'No', Description: 'Personality / vibe / compatibility score', 'Valid Options / Format': 'Number 1 to 10 (defaults to 5)' },
         { Field: 'Aesthetics Score', 'Input Type': '🔢 NUMBER', Required: 'No', Description: 'Looks / physical attraction score', 'Valid Options / Format': 'Number 1 to 10 (defaults to 5)' },
         { Field: 'Dating Intention', 'Input Type': '🔘 SELECT', Required: 'No', Description: 'What kind of relationship (same as in-app pills)', 'Valid Options / Format': VALID_INTENTIONS.join(', ') },
         { Field: 'Funnel Stage', 'Input Type': '🔘 SELECT', Required: 'No', Description: 'Which stage she is in (same as in-app columns)', 'Valid Options / Format': FRIENDLY_STAGES.join(', ') },
@@ -460,7 +460,7 @@ export function parseExcelFile(file: File): Promise<ParseResult> {
                             row['Notes'] ?? row['notes'] ?? row['NOTES'] ?? row['Comments'] ?? ''
                         ),
                         qualificationScore: parseScore(
-                            row['Qualification Score (1-10)'] ?? row['Qualification Score'] ?? row['Qualification'] ?? 5
+                            row['Personality Score (1-10)'] ?? row['Personality Score'] ?? row['Qualification Score (1-10)'] ?? row['Qualification Score'] ?? row['Qualification'] ?? 5
                         ),
                         aestheticsScore: parseScore(
                             row['Aesthetics Score (1-10)'] ?? row['Aesthetics Score'] ?? row['Aesthetics'] ?? row['Looks'] ?? 5

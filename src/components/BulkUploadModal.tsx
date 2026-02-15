@@ -226,7 +226,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                 {/* Format hints */}
                                 <div className="text-xs text-slate-400 space-y-2">
                                     <p className="font-semibold text-slate-500">Expected columns:</p>
-                                    <p>Name (required), Origin Platform, Communication Platform, Country, Personality Traits, Notes, Qualification Score (1-10), Aesthetics Score (1-10), Dating Intention, Funnel Stage, Origin / How We Met</p>
+                                    <p>Name (required), Origin Platform, Communication Platform, Country, Personality Traits, Notes, Personality Score (1-10), Aesthetics Score (1-10), Dating Intention, Funnel Stage, Origin / How We Met</p>
 
                                     {/* SELECT fields - must pick from options */}
                                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2.5">
@@ -279,7 +279,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                     {/* NUMBER fields */}
                                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
                                         <p className="font-bold text-slate-600 text-[13px] mb-1">🔢 NUMBER fields — 1 to 10:</p>
-                                        <p className="text-slate-500">Qualification Score, Aesthetics Score (defaults to 5 if empty)</p>
+                                        <p className="text-slate-500">Personality Score, Aesthetics Score (defaults to 5 if empty)</p>
                                     </div>
                                 </div>
                             </div>
@@ -333,7 +333,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">📍 Origin</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">💬 Talking On</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Country</th>
-                                                    <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Qual</th>
+                                                    <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Pers</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Aesth</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Avg</th>
                                                     <th className="px-3 py-2.5 text-left font-semibold text-slate-600">Intention</th>
