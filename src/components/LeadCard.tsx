@@ -5,6 +5,7 @@ import type { Lead, FunnelStage } from '../types'
 import { PLATFORM_ICONS, INTENTION_CONFIG, FUNNEL_STAGE_NAMES } from '../utils/constants'
 import { getDaysSince } from '../utils/dateHelpers'
 import { useGameStore } from '../store/useGameStore'
+import { getTemperaturePercent } from './TemperatureBoard'
 
 interface LeadCardProps {
     lead: Lead
@@ -167,7 +168,7 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
                     <div className="flex items-center gap-2">
                         <h4 className="text-sm font-semibold text-slate-900 truncate">{lead.name}</h4>
                         <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${getTemperatureClass(lead.temperature)}`}>
-                            {getTemperatureEmoji(lead.temperature)}
+                            {getTemperatureEmoji(lead.temperature)} {getTemperaturePercent(lead)}%
                         </span>
                     </div>
 
@@ -238,7 +239,7 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
                     <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-slate-900 truncate">{lead.name}</h4>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getTemperatureClass(lead.temperature)}`}>
-                            {getTemperatureEmoji(lead.temperature)} {lead.temperature}
+                            {getTemperatureEmoji(lead.temperature)} {getTemperaturePercent(lead)}%
                         </span>
                     </div>
                     <p className="text-sm text-slate-500 mt-0.5">

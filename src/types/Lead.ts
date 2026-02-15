@@ -35,6 +35,8 @@ export interface Lead {
     lastInteractionDate?: string; // ISO date string
     lastResponseDate?: string; // ISO date string — last INCOMING interaction
     temperatureHistory?: { date: string; temperature: Temperature }[]; // timeline snapshots
+    temperatureNotes?: string; // Notes explaining temperature context (e.g. why it got cold)
+    temperatureOverride?: number; // Manual temperature override (0-100), null = auto-decay
     stageEnteredAt: string; // ISO date string
     deadFromStage?: FunnelStage; // Which stage lead was in when moved to Dead
     deadNotes?: string; // Notes about why lead went dead
@@ -75,6 +77,8 @@ export interface UpdateLeadInput {
     lastInteractionDate?: string;
     lastResponseDate?: string;
     temperatureHistory?: { date: string; temperature: Temperature }[];
+    temperatureNotes?: string;
+    temperatureOverride?: number;
     deadNotes?: string;
 }
 

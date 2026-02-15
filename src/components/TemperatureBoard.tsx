@@ -1,12 +1,14 @@
-import { useState, useMemo } from 'react'
-import { Thermometer, HelpCircle, CheckCircle2, XCircle, X } from 'lucide-react'
+import { useState, useMemo, useCallback, useRef } from 'react'
+import { Thermometer, HelpCircle, CheckCircle2, XCircle, X, MessageSquare } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import { PLATFORM_ICONS, FUNNEL_STAGE_NAMES } from '../utils/constants'
 import type { Lead } from '../types'
 
 /** Calculate temperature as 0–100% based on days since last incoming response.
- *  100% = just responded, decays exponentially: ~70% at 3 days, ~35% at 7 days, ~0% at 14+ days */
+ *  100% = just responded, decays exponentially: ~70% at 3 days, ~35% at 7 days, ~0% at 14+ days.
+ *  If the lead has a manual override, use that instead. */
 export function getTemperaturePercent(lead: Lead): number {
+    if (lead.temperatureOverride != null) return Math.max(0, Math.min(100, lead.temperatureOverride))
     const ref = lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt
     const days = Math.max(0, (Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24))
     // Exponential decay: half-life ~4 days → k = ln(2)/4 ≈ 0.173
@@ -63,8 +65,39 @@ interface TemperatureBoardProps {
 export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps) {
     const leads = useGameStore(state => state.leads)
     const interactions = useGameStore(state => state.interactions)
+    const updateLead = useGameStore(state => state.updateLead)
     const [showHelp, setShowHelp] = useState(false)
     const [sortBy, setSortBy] = useState<'temp' | 'name' | 'stage'>('temp')
+    const [editingNotes, setEditingNotes] = useState<string | null>(null)
+    const [notesValue, setNotesValue] = useState('')
+    const barRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+    const handleBarClick = useCallback((leadId: string, e: React.MouseEvent<HTMLDivElement>) => {
+        const bar = barRefs.current[leadId]
+        if (!bar) return
+        e.stopPropagation()
+        const rect = bar.getBoundingClientRect()
+        const pct = Math.round(Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100)))
+        updateLead(leadId, { temperatureOverride: pct })
+    }, [updateLead])
+
+    const handleResetTemp = useCallback((leadId: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+        updateLead(leadId, { temperatureOverride: null } as any)
+    }, [updateLead])
+
+    const openNotes = useCallback((leadId: string, current: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+        setEditingNotes(leadId)
+        setNotesValue(current)
+    }, [])
+
+    const saveNotes = useCallback(() => {
+        if (editingNotes) {
+            updateLead(editingNotes, { temperatureNotes: notesValue })
+            setEditingNotes(null)
+        }
+    }, [editingNotes, notesValue, updateLead])
 
     const activeLeads = useMemo(() => {
         const active = leads.filter(l => l.funnelStage !== 'Dead' && l.funnelStage !== 'Lover')
@@ -162,6 +195,14 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                                 <li>• <XCircle className="w-3 h-3 text-slate-300 inline" /> = no response this week yet</li>
                             </ul>
                         </div>
+                        <div className="sm:col-span-2 mt-1 pt-3 border-t border-slate-200">
+                            <p className="font-semibold text-slate-700 mb-1">✏️ Manual Editing & Notes</p>
+                            <ul className="space-y-1 text-xs">
+                                <li>• <span className="font-bold">Click anywhere on the temperature bar</span> to manually set the temperature percentage</li>
+                                <li>• A <span className="font-bold text-amber-600">"manual"</span> badge will appear — click the ✕ next to it to reset to auto-decay</li>
+                                <li>• Use the <MessageSquare className="w-3 h-3 text-slate-400 inline" /> <span className="font-bold">notes icon</span> to add context about why the temperature changed</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             )}
@@ -202,70 +243,152 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                     {activeLeads.map(({ lead, pct, checkedIn }) => {
                         const ref = lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt
                         const days = Math.max(0, Math.floor((Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24)))
+                        const isManual = lead.temperatureOverride != null
 
                         return (
                             <div
                                 key={lead.id}
-                                onClick={() => onSelectLead(lead)}
-                                className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 ${getTempBg(pct)}`}
+                                className={`rounded-xl border transition-all hover:shadow-md ${getTempBg(pct)}`}
                             >
-                                {/* Check-in indicator */}
-                                <div className="flex-shrink-0" title={checkedIn ? 'Responded this week ✅' : 'No response this week'}>
-                                    {checkedIn ? (
-                                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                                    ) : (
-                                        <XCircle className="w-5 h-5 text-slate-300" />
-                                    )}
-                                </div>
-
-                                {/* Avatar */}
-                                <div className="flex-shrink-0">
-                                    {lead.profilePhotoUrl ? (
-                                        <img
-                                            src={lead.profilePhotoUrl}
-                                            alt={lead.name}
-                                            className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
-                                        />
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                            {lead.name.charAt(0).toUpperCase()}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-semibold text-slate-800 truncate">{lead.name}</span>
-                                        <span className="text-[10px] text-slate-400 hidden sm:inline">
-                                            {PLATFORM_ICONS[lead.platformOrigin]} {FUNNEL_STAGE_NAMES[lead.funnelStage]}
-                                        </span>
+                                <div
+                                    onClick={() => onSelectLead(lead)}
+                                    className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 cursor-pointer"
+                                >
+                                    {/* Check-in indicator — more prominent */}
+                                    <div className="flex-shrink-0" title={checkedIn ? 'Responded this week ✅' : 'No response this week'}>
+                                        {checkedIn ? (
+                                            <div className="flex items-center gap-1.5 bg-emerald-100 border border-emerald-300 rounded-lg px-2 py-1">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                <span className="text-[10px] font-bold text-emerald-700 hidden sm:inline">Checked in</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-lg px-2 py-1">
+                                                <XCircle className="w-4 h-4 text-slate-400" />
+                                                <span className="text-[10px] font-medium text-slate-400 hidden sm:inline">No reply</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    {/* Temperature bar */}
-                                    <div className="flex items-center gap-2 mt-1.5">
-                                        <div className="flex-1 h-2 bg-white/60 rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full bg-gradient-to-r ${getTempBarColor(pct)} transition-all duration-500`}
-                                                style={{ width: `${pct}%` }}
+
+                                    {/* Avatar */}
+                                    <div className="flex-shrink-0">
+                                        {lead.profilePhotoUrl ? (
+                                            <img
+                                                src={lead.profilePhotoUrl}
+                                                alt={lead.name}
+                                                className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
                                             />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                                {lead.name.charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold text-slate-800 truncate">{lead.name}</span>
+                                            <span className="text-[10px] text-slate-400 hidden sm:inline">
+                                                {PLATFORM_ICONS[lead.platformOrigin]} {FUNNEL_STAGE_NAMES[lead.funnelStage]}
+                                            </span>
+                                            {isManual && (
+                                                <span className="inline-flex items-center gap-1 text-[9px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 rounded-full px-1.5 py-0.5">
+                                                    ✏️ manual
+                                                    <button
+                                                        onClick={(e) => handleResetTemp(lead.id, e)}
+                                                        className="hover:text-red-600 ml-0.5"
+                                                        title="Reset to auto-decay"
+                                                    >✕</button>
+                                                </span>
+                                            )}
+                                        </div>
+                                        {/* Temperature bar — CLICKABLE to set manually */}
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                            <div
+                                                ref={el => { barRefs.current[lead.id] = el }}
+                                                className="flex-1 h-3 bg-white/60 rounded-full overflow-hidden cursor-crosshair relative group/bar"
+                                                onClick={(e) => handleBarClick(lead.id, e)}
+                                                title="Click to set temperature manually"
+                                            >
+                                                <div
+                                                    className={`h-full rounded-full bg-gradient-to-r ${getTempBarColor(pct)} transition-all duration-500`}
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                                <div className="absolute inset-0 bg-black/0 group-hover/bar:bg-black/5 rounded-full transition" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className={`text-[11px] font-medium ${days > 7 ? 'text-red-500' : days > 3 ? 'text-amber-500' : 'text-slate-400'}`}>
+                                                {days === 0 ? 'Responded today' : `${days}d since last response`}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className={`text-[11px] font-medium ${days > 7 ? 'text-red-500' : days > 3 ? 'text-amber-500' : 'text-slate-400'}`}>
-                                            {days === 0 ? 'Responded today' : `${days}d since last response`}
-                                        </span>
+
+                                    {/* Notes button */}
+                                    <button
+                                        onClick={(e) => openNotes(lead.id, lead.temperatureNotes || '', e)}
+                                        className={`flex-shrink-0 p-1.5 rounded-lg transition ${lead.temperatureNotes ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
+                                        title={lead.temperatureNotes ? `Notes: ${lead.temperatureNotes}` : 'Add temperature notes'}
+                                    >
+                                        <MessageSquare className="w-4 h-4" />
+                                    </button>
+
+                                    {/* Temperature % */}
+                                    <div className="flex-shrink-0 text-right">
+                                        <div className={`text-lg sm:text-xl font-bold ${getTempColor(pct)}`}>
+                                            {pct}%
+                                        </div>
+                                        <div className="text-[10px] text-slate-500">
+                                            {getTempLabel(pct)}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Temperature % */}
-                                <div className="flex-shrink-0 text-right">
-                                    <div className={`text-lg sm:text-xl font-bold ${getTempColor(pct)}`}>
-                                        {pct}%
+                                {/* Temperature notes preview */}
+                                {lead.temperatureNotes && editingNotes !== lead.id && (
+                                    <div
+                                        className="px-4 pb-3 -mt-1 cursor-pointer"
+                                        onClick={(e) => openNotes(lead.id, lead.temperatureNotes || '', e)}
+                                    >
+                                        <p className="text-xs text-slate-500 italic bg-white/50 rounded-lg px-3 py-1.5 border border-slate-200/50">
+                                            📝 {lead.temperatureNotes}
+                                        </p>
                                     </div>
-                                    <div className="text-[10px] text-slate-500">
-                                        {getTempLabel(pct)}
+                                )}
+
+                                {/* Inline notes editor */}
+                                {editingNotes === lead.id && (
+                                    <div className="px-4 pb-3 -mt-1" onClick={e => e.stopPropagation()}>
+                                        <textarea
+                                            autoFocus
+                                            className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                                            rows={2}
+                                            placeholder="Why did the temperature change? e.g. 'She went on vacation', 'Ghosted after date'…"
+                                            value={notesValue}
+                                            onChange={e => setNotesValue(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveNotes() }
+                                                if (e.key === 'Escape') setEditingNotes(null)
+                                            }}
+                                        />
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                            <button
+                                                onClick={saveNotes}
+                                                className="text-[11px] font-semibold text-white bg-brand-500 hover:bg-brand-600 px-3 py-1 rounded-lg transition"
+                                            >Save</button>
+                                            <button
+                                                onClick={() => setEditingNotes(null)}
+                                                className="text-[11px] font-medium text-slate-500 hover:text-slate-700 px-3 py-1 rounded-lg transition"
+                                            >Cancel</button>
+                                            {notesValue && (
+                                                <button
+                                                    onClick={() => { setNotesValue(''); updateLead(lead.id, { temperatureNotes: '' }); setEditingNotes(null) }}
+                                                    className="text-[11px] font-medium text-red-500 hover:text-red-700 px-3 py-1 rounded-lg transition ml-auto"
+                                                >Clear</button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )
                     })}

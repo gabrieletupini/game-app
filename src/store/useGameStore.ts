@@ -271,18 +271,30 @@ export const useGameStore = create<GameStore>()(
         updateLead: (id: string, updates: UpdateLeadInput) => {
             try {
                 // Strip undefined values so they don't overwrite existing data
+                // null values mean "delete this field"
                 const cleanUpdates: Record<string, unknown> = {};
+                const deleteKeys: string[] = [];
                 for (const [key, value] of Object.entries(updates)) {
-                    if (value !== undefined) cleanUpdates[key] = value;
+                    if (value === null) {
+                        deleteKeys.push(key);
+                    } else if (value !== undefined) {
+                        cleanUpdates[key] = value;
+                    }
                 }
                 const updatedData = {
                     ...cleanUpdates,
                     updatedAt: new Date().toISOString()
                 };
 
-                const updatedLeads = get().leads.map(lead =>
-                    lead.id === id ? { ...lead, ...updatedData } : lead
-                );
+                const updatedLeads = get().leads.map(lead => {
+                    if (lead.id !== id) return lead;
+                    const updated = { ...lead, ...updatedData };
+                    // Remove fields that were explicitly set to null
+                    for (const key of deleteKeys) {
+                        delete (updated as Record<string, unknown>)[key];
+                    }
+                    return updated;
+                });
                 set({ leads: updatedLeads });
                 firestoreService.saveLeads(updatedLeads);
             } catch (error) {
