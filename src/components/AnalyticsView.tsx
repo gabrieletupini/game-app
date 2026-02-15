@@ -217,7 +217,7 @@ export default function AnalyticsView() {
                         <span className="text-sm font-bold text-slate-900">{interactionsThisWeek}</span>
                     </div>
                     <div className="flex items-center justify-between py-3 border-b border-slate-100">
-                        <span className="text-sm text-slate-600">Dead Leads</span>
+                        <span className="text-sm text-slate-600">Cold Leads</span>
                         <span className="text-sm font-bold text-slate-500">{stats.dead}</span>
                     </div>
                     <div className="flex items-center justify-between py-3">

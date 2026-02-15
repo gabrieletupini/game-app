@@ -17,7 +17,7 @@ const FRIENDLY_STAGES = [
     'Real-World Interaction',
     'Intimacy & Connection',
     'Lover',
-    'Dead',
+    'Cold Leads',
 ]
 
 // Friendly stage names → internal keys
@@ -45,6 +45,9 @@ const STAGE_NAME_TO_KEY: Record<string, FunnelStage> = {
     'dead': 'Dead',
     'dead leads': 'Dead',
     'dead lead': 'Dead',
+    'cold leads': 'Dead',
+    'cold lead': 'Dead',
+    'cold': 'Dead',
 }
 
 // ── EXPORT ──
@@ -220,7 +223,7 @@ export function downloadImportTemplate() {
             'Personality Score (1-10)': 6,
             'Aesthetics Score (1-10)': 7,
             'Dating Intention': 'Exploring',
-            'Funnel Stage': 'Dead',
+            'Funnel Stage': 'Cold Leads',
             'Origin / How We Met': 'Facebook dating',
         },
     ]
@@ -315,7 +318,7 @@ export function downloadImportTemplate() {
         { '#': 3, 'Stage Name (use this in Excel)': 'Real-World Interaction', 'Description': "☕ You've met in person or had a real-time call/video" },
         { '#': 4, 'Stage Name (use this in Excel)': 'Intimacy & Connection', 'Description': '💜 Deep emotional or physical connection established' },
         { '#': 5, 'Stage Name (use this in Excel)': 'Lover', 'Description': '❤️ Official or ongoing relationship' },
-        { '#': 6, 'Stage Name (use this in Excel)': 'Dead', 'Description': '💀 Ghosted, rejected, or no longer pursuing' },
+        { '#': 6, 'Stage Name (use this in Excel)': 'Cold Leads', 'Description': '🧊 Archived — not active right now, but could revive later' },
     ]
     const stageRefWs = XLSX.utils.json_to_sheet(stageRefRows)
     stageRefWs['!cols'] = [{ wch: 4 }, { wch: 32 }, { wch: 56 }]

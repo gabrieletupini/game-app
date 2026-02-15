@@ -72,8 +72,8 @@ export default function KanbanBoard({ onSelectLead }: KanbanBoardProps) {
             } else if (targetId === 'Dead') {
                 addToast({
                     type: 'info',
-                    title: '💀 Lead Archived',
-                    message: `${lead.name} moved to Dead Leads`,
+                    title: '🧊 Lead Archived',
+                    message: `${lead.name} moved to Cold Leads`,
                     duration: 3000,
                 })
             }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Skull, RotateCcw, Trash2, MessageSquare, Check, X } from 'lucide-react'
+import { Snowflake, RotateCcw, Trash2, MessageSquare, Check, X, HelpCircle } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import { FUNNEL_STAGE_NAMES } from '../utils/constants'
 import type { Lead } from '../types'
@@ -17,6 +17,7 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
 
     const [editingNotesId, setEditingNotesId] = useState<string | null>(null)
     const [notesValue, setNotesValue] = useState('')
+    const [showHelp, setShowHelp] = useState(false)
 
     const deadLeads = leads
         .filter(l => l.funnelStage === 'Dead')
@@ -50,7 +51,7 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
         updateLead(leadId, { deadNotes: notesValue.trim() || undefined } as any)
         setEditingNotesId(null)
         setNotesValue('')
-        addToast({ type: 'success', title: 'Notes Saved', message: 'Dead lead notes updated', duration: 1500 })
+        addToast({ type: 'success', title: 'Notes Saved', message: 'Notes updated', duration: 1500 })
     }
 
     const cancelEditNotes = () => {
@@ -71,24 +72,61 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
 
     return (
         <div>
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-                    <Skull className="w-5 h-5 text-slate-500" />
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                    <Snowflake className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900">Dead Leads</h2>
+                    <h2 className="text-xl font-bold text-slate-900">Cold Leads</h2>
                     <p className="text-sm text-slate-500">{deadLeads.length} archived {deadLeads.length === 1 ? 'lead' : 'leads'} • Right-click any card in the funnel to send here</p>
                 </div>
+                <button
+                    onClick={() => setShowHelp(!showHelp)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition"
+                    title="What are cold leads?"
+                >
+                    <HelpCircle className="w-5 h-5" />
+                </button>
             </div>
+
+            {/* Help explainer */}
+            {showHelp && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-5 mb-6 relative">
+                    <button onClick={() => setShowHelp(false)} className="absolute top-3 right-3 p-1 text-slate-400 hover:text-slate-600">
+                        <X className="w-4 h-4" />
+                    </button>
+                    <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <Snowflake className="w-4 h-4 text-blue-500" /> What are Cold Leads?
+                    </h3>
+                    <p className="text-sm text-slate-600 mb-3">
+                        These are leads that went cold — ghosted, fizzled out, or paused. But they're <span className="font-semibold">not gone forever</span>.
+                    </p>
+                    <ul className="space-y-2 text-sm text-slate-600">
+                        <li className="flex items-start gap-2">
+                            <span className="mt-0.5">📸</span>
+                            <span>Keep watching their <span className="font-semibold">Instagram stories</span> — stay on their radar without being pushy</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="mt-0.5">💬</span>
+                            <span>One day <span className="font-semibold">reply to a story</span> or send a casual message — you never know when the timing is right</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="mt-0.5">♻️</span>
+                            <span>Hit the <span className="font-semibold">revive button</span> to move them back into your active funnel whenever you're ready</span>
+                        </li>
+                    </ul>
+                    <p className="text-xs text-slate-400 mt-3 italic">Think of this as your archive — cold doesn't mean dead, just sleeping 💤</p>
+                </div>
+            )}
 
             {deadLeads.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Skull className="w-8 h-8 text-slate-300" />
+                    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Snowflake className="w-8 h-8 text-blue-300" />
                     </div>
-                    <h3 className="font-semibold text-slate-700">No dead leads</h3>
+                    <h3 className="font-semibold text-slate-700">No cold leads</h3>
                     <p className="text-sm text-slate-400 mt-1 max-w-sm mx-auto">
-                        Right-click any card in the kanban, or drag it to the Dead zone to archive it.
+                        Right-click any card in the kanban, or drag it to the Cold Leads zone to archive it.
                     </p>
                 </div>
             ) : (
@@ -115,7 +153,7 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
                                                 </h4>
                                                 {lead.deadFromStage && (
                                                     <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getStageColor(lead.deadFromStage)}`}>
-                                                        ☠️ Died in {FUNNEL_STAGE_NAMES[lead.deadFromStage] || lead.deadFromStage}
+                                                        ❄️ Froze in {FUNNEL_STAGE_NAMES[lead.deadFromStage] || lead.deadFromStage}
                                                     </span>
                                                 )}
                                             </div>
@@ -160,7 +198,7 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
                                             <textarea
                                                 value={notesValue}
                                                 onChange={e => setNotesValue(e.target.value)}
-                                                placeholder="Why did this lead go dead? Write your notes here..."
+                                                placeholder="Why did this lead go cold? Write your notes here..."
                                                 rows={3}
                                                 autoFocus
                                                 className="w-full text-sm bg-transparent border-none outline-none resize-none text-slate-700 placeholder-slate-400"

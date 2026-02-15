@@ -32,8 +32,8 @@ export default function LoversTable({ onSelectLead }: LoversTableProps) {
         moveLeadToStage(lead.id, 'Dead')
         addToast({
             type: 'info',
-            title: 'Lead Archived',
-            message: `${lead.name} moved to Dead Leads`,
+            title: '🧊 Lead Archived',
+            message: `${lead.name} moved to Cold Leads`,
             duration: 2000,
         })
     }
@@ -76,7 +76,7 @@ export default function LoversTable({ onSelectLead }: LoversTableProps) {
                                 </button>
                                 <button
                                     onClick={(e) => handleMoveToDead(lead, e)}
-                                    title="Move to dead leads"
+                                    title="Move to cold leads"
                                     className="p-1.5 bg-white rounded-lg shadow-md border border-slate-200 text-slate-500 hover:text-red-600 transition"
                                 >
                                     <Skull className="w-3.5 h-3.5" />

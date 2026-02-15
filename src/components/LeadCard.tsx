@@ -79,7 +79,7 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
         if (stage === 'Lover') {
             addToast({ type: 'success', title: '❤️ New Lover!', message: `${lead.name} promoted to Lover`, duration: 3000 })
         } else if (stage === 'Dead') {
-            addToast({ type: 'info', title: '💀 Lead Archived', message: `${lead.name} moved to Dead Leads`, duration: 3000 })
+            addToast({ type: 'info', title: '🧊 Lead Archived', message: `${lead.name} moved to Cold Leads`, duration: 3000 })
         } else {
             addToast({ type: 'info', title: 'Lead Moved', message: `${lead.name} moved to ${FUNNEL_STAGE_NAMES[stage]}`, duration: 2000 })
         }
@@ -91,7 +91,7 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
         { stage: 'Stage3', label: FUNNEL_STAGE_NAMES.Stage3, emoji: '3️⃣', color: 'hover:bg-amber-50 hover:text-amber-700' },
         { stage: 'Stage4', label: FUNNEL_STAGE_NAMES.Stage4, emoji: '4️⃣', color: 'hover:bg-emerald-50 hover:text-emerald-700' },
         { stage: 'Lover', label: 'Lover', emoji: '❤️', color: 'hover:bg-pink-50 hover:text-pink-700' },
-        { stage: 'Dead', label: 'Dead', emoji: '💀', color: 'hover:bg-red-50 hover:text-red-700' },
+        { stage: 'Dead', label: 'Cold Leads', emoji: '🧊', color: 'hover:bg-blue-50 hover:text-blue-700' },
     ]
 
     const style = transform

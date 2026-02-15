@@ -1,4 +1,4 @@
-import { Plus, LayoutGrid, Heart as HeartIcon, Skull, BarChart3, Thermometer, Menu, X, Upload, Download, ClipboardCheck } from 'lucide-react'
+import { Plus, LayoutGrid, Heart as HeartIcon, Snowflake, BarChart3, Thermometer, Menu, X, Upload, Download, ClipboardCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { SyncStatus } from '../services/firestoreService'
@@ -67,7 +67,7 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'funnel', label: 'Funnel', icon: LayoutGrid },
     { id: 'temperature', label: 'Temp', icon: Thermometer },
     { id: 'lovers', label: 'Lovers', icon: HeartIcon },
-    { id: 'dead', label: 'Dead Leads', icon: Skull },
+    { id: 'dead', label: 'Cold Leads', icon: Snowflake },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ]
 

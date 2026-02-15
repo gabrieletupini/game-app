@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Thermometer, HelpCircle, CheckCircle2, XCircle, X, MessageSquare } from 'lucide-react'
+import { Thermometer, HelpCircle, CheckCircle2, XCircle, X, MessageSquare, Snowflake } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import { PLATFORM_ICONS, FUNNEL_STAGE_NAMES } from '../utils/constants'
 import type { Lead } from '../types'
@@ -74,6 +74,8 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
     const leads = useGameStore(state => state.leads)
     const interactions = useGameStore(state => state.interactions)
     const updateLead = useGameStore(state => state.updateLead)
+    const moveLeadToStage = useGameStore(state => state.moveLeadToStage)
+    const addToast = useGameStore(state => state.addToast)
     const [showHelp, setShowHelp] = useState(false)
     const [sortBy, setSortBy] = useState<'temp' | 'name' | 'stage'>('temp')
     const [editingNotes, setEditingNotes] = useState<string | null>(null)
@@ -112,6 +114,17 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
         }
         setEditingDays(null)
     }, [daysInputValue, updateLead])
+
+    const handleMoveToCold = useCallback((lead: Lead, e: React.MouseEvent) => {
+        e.stopPropagation()
+        moveLeadToStage(lead.id, 'Dead')
+        addToast({
+            type: 'info',
+            title: '🧊 Moved to Cold Leads',
+            message: `${lead.name} archived — you can revive them anytime`,
+            duration: 3000,
+        })
+    }, [moveLeadToStage, addToast])
 
     const openNotes = useCallback((leadId: string, current: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -400,6 +413,19 @@ export default function TemperatureBoard({ onSelectLead }: TemperatureBoardProps
                                             {getTempLabel(pct)}
                                         </div>
                                     </div>
+
+                                    {/* Move to Cold Leads button — only shows at 0% */}
+                                    {pct === 0 && (
+                                        <button
+                                            onClick={(e) => handleMoveToCold(lead, e)}
+                                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 text-blue-600 rounded-xl text-xs font-semibold transition-all hover:shadow-sm"
+                                            title="Archive this lead to Cold Leads"
+                                        >
+                                            <Snowflake className="w-3.5 h-3.5" />
+                                            <span className="hidden sm:inline">Move to Cold Leads</span>
+                                            <span className="sm:hidden">❄️</span>
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Temperature notes preview */}

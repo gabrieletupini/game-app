@@ -1,4 +1,4 @@
-import { Users, Heart, TrendingUp, Skull } from 'lucide-react'
+import { Users, Heart, TrendingUp, Snowflake } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 
 export default function StatsBar() {
@@ -28,11 +28,11 @@ export default function StatsBar() {
             bg: 'bg-emerald-50',
         },
         {
-            label: 'Dead Leads',
+            label: 'Cold Leads',
             value: stats.dead,
-            icon: Skull,
-            color: 'text-slate-500',
-            bg: 'bg-slate-50',
+            icon: Snowflake,
+            color: 'text-blue-500',
+            bg: 'bg-blue-50',
         },
     ]
 

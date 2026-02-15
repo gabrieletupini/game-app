@@ -86,7 +86,7 @@ export default function StageColumn({ stage, leads, onSelectLead }: StageColumnP
     )
 }
 
-// Special "Dead" drop zone that appears during drag
+// Special "Cold Leads" drop zone that appears during drag
 export function DeadDropZone() {
     const { setNodeRef, isOver } = useDroppable({ id: 'Dead' })
 
@@ -96,15 +96,15 @@ export function DeadDropZone() {
             className={`
         mt-4 p-4 rounded-2xl border-2 border-dashed transition-all duration-200 text-center
         ${isOver
-                    ? 'border-red-400 bg-red-50 dead-zone-pulse'
+                    ? 'border-blue-400 bg-blue-50 dead-zone-pulse'
                     : 'border-slate-300 bg-slate-50 hover:border-slate-400'
                 }
       `}
         >
             <div className="flex items-center justify-center gap-2">
-                <span className="text-xl">💀</span>
-                <span className={`text-sm font-semibold ${isOver ? 'text-red-600' : 'text-slate-500'}`}>
-                    Drop here to mark as Dead Lead
+                <span className="text-xl">🧊</span>
+                <span className={`text-sm font-semibold ${isOver ? 'text-blue-600' : 'text-slate-500'}`}>
+                    Drop here to move to Cold Leads
                 </span>
             </div>
         </div>

@@ -28,7 +28,7 @@ export const FUNNEL_STAGE_NAMES = {
     Stage3: 'Real-World Interaction',
     Stage4: 'Intimacy & Connection',
     Lover: 'Lovers',
-    Dead: 'Dead Leads'
+    Dead: 'Cold Leads'
 } as const;
 
 export const PLATFORM_ICONS = {

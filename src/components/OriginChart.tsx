@@ -185,7 +185,7 @@ export default function OriginChart() {
                                     <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-2 text-center">Total</th>
                                     <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-2 text-center">Active</th>
                                     <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-2 text-center">❤️ Lovers</th>
-                                    <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-2 text-center">💀 Dead</th>
+                                    <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-2 text-center">🧊 Cold</th>
                                     <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-2 text-center">Avg Score</th>
                                     <th className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-2 text-center">Conv %</th>
                                 </tr>

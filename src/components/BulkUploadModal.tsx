@@ -254,7 +254,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                                         <div>
                                             <p className="font-semibold text-amber-700 mb-1">🎯 Funnel Stage:</p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {['👋 Initial Contact', '💬 Qualified Interest', '☕ Real-World Interaction', '💜 Intimacy & Connection', '❤️ Lover', '💀 Dead'].map(s => (
+                                                {['👋 Initial Contact', '💬 Qualified Interest', '☕ Real-World Interaction', '💜 Intimacy & Connection', '❤️ Lover', '🧊 Cold Leads'].map(s => (
                                                     <span key={s} className="bg-white border border-amber-200 text-amber-800 px-2 py-0.5 rounded-md font-medium">{s}</span>
                                                 ))}
                                             </div>
