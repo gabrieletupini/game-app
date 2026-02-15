@@ -446,35 +446,73 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                 ) : (
                                     /* View Mode */
                                     <>
-                                        {lead.datingIntention && (
+                                        {/* Platforms */}
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Intention</h4>
+                                                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">📍 Origin Platform</h4>
+                                                <p className="text-sm text-slate-700 mt-1">{PLATFORM_ICONS[lead.platformOrigin] || '📱'} {lead.platformOrigin}</p>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">💬 Talking On</h4>
+                                                <p className="text-sm text-slate-700 mt-1">{PLATFORM_ICONS[lead.communicationPlatform || lead.platformOrigin] || '📱'} {lead.communicationPlatform || lead.platformOrigin}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Country */}
+                                        <div>
+                                            <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Country</h4>
+                                            <p className="text-sm text-slate-700 mt-1">{lead.countryOrigin || <span className="text-slate-400 italic">Not set</span>}</p>
+                                        </div>
+
+                                        {/* Scores breakdown */}
+                                        <div className="bg-slate-50 rounded-xl p-3">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="text-xs font-semibold text-slate-700">Scores</h4>
+                                                <span className="text-xs font-bold text-brand-600">
+                                                    Overall: {(((lead.qualificationScore || 5) + (lead.aestheticsScore || 5)) / 2).toFixed(1)}/10
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-slate-500">🧠 Qualification</span>
+                                                    <span className="text-xs font-bold text-brand-600">{lead.qualificationScore || 5}/10</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-slate-500">✨ Aesthetics</span>
+                                                    <span className="text-xs font-bold text-purple-600">{lead.aestheticsScore || 5}/10</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Intention */}
+                                        <div>
+                                            <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Dating Intention</h4>
+                                            {lead.datingIntention && lead.datingIntention !== 'Undecided' ? (
                                                 <span className={`inline-flex items-center gap-1.5 text-sm font-medium mt-1 px-2.5 py-1 rounded-lg ${INTENTION_CONFIG[lead.datingIntention]?.bg || 'bg-slate-50'} ${INTENTION_CONFIG[lead.datingIntention]?.color || 'text-slate-500'}`}>
                                                     {INTENTION_CONFIG[lead.datingIntention]?.emoji} {lead.datingIntention}
                                                 </span>
-                                            </div>
-                                        )}
-                                        {lead.personalityTraits && (
-                                            <div>
-                                                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Personality</h4>
-                                                <p className="text-sm text-slate-700 mt-1">{lead.personalityTraits}</p>
-                                            </div>
-                                        )}
-                                        {lead.originDetails && (
-                                            <div>
-                                                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">How you met</h4>
-                                                <p className="text-sm text-slate-700 mt-1">{lead.originDetails}</p>
-                                            </div>
-                                        )}
-                                        {lead.notes && (
-                                            <div>
-                                                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Notes</h4>
-                                                <p className="text-sm text-slate-700 mt-1">{lead.notes}</p>
-                                            </div>
-                                        )}
-                                        {!lead.personalityTraits && !lead.originDetails && !lead.notes && (
-                                            <p className="text-sm text-slate-400 text-center py-4">No details yet. Click edit to add some.</p>
-                                        )}
+                                            ) : (
+                                                <p className="text-sm text-slate-400 italic mt-1">Undecided</p>
+                                            )}
+                                        </div>
+
+                                        {/* Personality */}
+                                        <div>
+                                            <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Personality Traits</h4>
+                                            <p className="text-sm text-slate-700 mt-1">{lead.personalityTraits || <span className="text-slate-400 italic">Not set</span>}</p>
+                                        </div>
+
+                                        {/* How you met */}
+                                        <div>
+                                            <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">How you met</h4>
+                                            <p className="text-sm text-slate-700 mt-1">{lead.originDetails || <span className="text-slate-400 italic">Not set</span>}</p>
+                                        </div>
+
+                                        {/* Notes */}
+                                        <div>
+                                            <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Notes</h4>
+                                            <p className="text-sm text-slate-700 mt-1">{lead.notes || <span className="text-slate-400 italic">No notes</span>}</p>
+                                        </div>
 
                                         {/* Actions */}
                                         <div className="flex gap-2 pt-2">
@@ -482,7 +520,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                                 onClick={() => setIsEditing(true)}
                                                 className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
                                             >
-                                                <Edit3 className="w-4 h-4" /> Edit
+                                                <Edit3 className="w-4 h-4" /> Edit All Fields
                                             </button>
                                             <button
                                                 onClick={() => setShowDeleteConfirm(true)}
@@ -494,10 +532,9 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                     </>
                                 )}
 
-                                {/* Move to Stage */}
-                                {!isEditing && (
-                                    <div className="pt-2">
-                                        <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Move to Stage</h4>
+                                {/* Move to Stage — always visible */}
+                                <div className="pt-2">
+                                    <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Move to Stage</h4>
                                         <div className="flex flex-wrap gap-2">
                                             {STAGES.map(stage => {
                                                 const isCurrentStage = lead.funnelStage === stage
@@ -525,8 +562,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                                 )
                                             })}
                                         </div>
-                                    </div>
-                                )}
+                                </div>
                             </div>
                         )}
 
