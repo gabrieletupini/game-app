@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from './store/useGameStore'
 import type { Lead } from './types'
+import { useAuth } from './contexts/AuthContext'
+import LoginScreen from './components/LoginScreen'
 import Header, { type Tab } from './components/Header'
 import StatsBar from './components/StatsBar'
 import KanbanBoard from './components/KanbanBoard'
@@ -17,6 +19,7 @@ import ToastContainer from './components/Toast'
 import { exportLeadsToExcel } from './services/excelService'
 
 function App() {
+    const { user, loading: authLoading } = useAuth()
     const loadData = useGameStore(state => state.loadData)
     const loading = useGameStore(state => state.loading)
 
@@ -27,12 +30,12 @@ function App() {
     const [showWeeklyCheckIn, setShowWeeklyCheckIn] = useState(false)
 
     useEffect(() => {
-        loadData()
+        if (user) loadData()
         // Cleanup: unsubscribe from Firestore real-time listener on unmount
         return () => {
             // firestoreService handles cleanup internally when subscribeToChanges is called again
         }
-    }, [loadData])
+    }, [loadData, user])
 
     // Show weekly check-in once data has loaded
     const leads = useGameStore(state => state.leads)
@@ -52,6 +55,24 @@ function App() {
         }
     }, [leads, selectedLead])
 
+    // Auth loading spinner
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-sm text-slate-500 mt-3">Loading...</p>
+                </div>
+            </div>
+        )
+    }
+
+    // Not logged in → show login screen
+    if (!user) {
+        return <LoginScreen />
+    }
+
+    // Data loading spinner
     if (loading.isLoading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">

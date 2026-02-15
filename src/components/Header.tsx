@@ -1,6 +1,7 @@
-import { Plus, LayoutGrid, Heart as HeartIcon, Snowflake, BarChart3, Thermometer, Menu, X, Upload, Download, ClipboardCheck } from 'lucide-react'
+import { Plus, LayoutGrid, Heart as HeartIcon, Snowflake, BarChart3, Thermometer, Menu, X, Upload, Download, ClipboardCheck, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
+import { useAuth } from '../contexts/AuthContext'
 import type { SyncStatus } from '../services/firestoreService'
 
 function DateFlowLogo({ className = 'w-9 h-9' }: { className?: string }) {
@@ -73,6 +74,7 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
 
 export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload, onExport, onCheckIn }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const { logout, user } = useAuth()
 
     return (
         <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -115,6 +117,13 @@ export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={logout}
+                            title={user?.email ? `Logout (${user.email})` : 'Logout'}
+                            className="p-2.5 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition hidden sm:flex items-center justify-center"
+                        >
+                            <LogOut className="w-4 h-4" />
+                        </button>
                         <button
                             onClick={onCheckIn}
                             title="Weekly check-in"
@@ -193,6 +202,13 @@ export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload
                             >
                                 <Download className="w-4 h-4" />
                                 Export Leads
+                            </button>
+                            <button
+                                onClick={() => { logout(); setMobileMenuOpen(false) }}
+                                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:text-red-600 hover:bg-red-50"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Logout
                             </button>
                         </div>
                     </div>
