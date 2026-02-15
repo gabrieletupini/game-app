@@ -36,17 +36,12 @@ function getAccentColor(temp: string) {
     }
 }
 
-function ScoreDots({ score }: { score: number }) {
+function ScoreLabel({ score }: { score: number }) {
+    const color = score >= 8 ? 'text-emerald-600' : score >= 5 ? 'text-amber-600' : 'text-red-500'
     return (
-        <div className="flex items-center gap-0.5">
-            {Array.from({ length: 10 }, (_, i) => (
-                <div
-                    key={i}
-                    className={`w-1.5 h-1.5 rounded-full ${i < score ? 'bg-brand-500' : 'bg-slate-200'
-                        }`}
-                />
-            ))}
-        </div>
+        <span className={`text-xs font-bold ${color}`}>
+            {score}<span className="text-slate-400 font-medium">/10</span>
+        </span>
     )
 }
 
@@ -200,7 +195,7 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
                     )}
 
                     <div className="flex items-center justify-between mt-2">
-                        <ScoreDots score={Math.round(((lead.qualificationScore || 5) + (lead.aestheticsScore || 5)) / 2)} />
+                        <ScoreLabel score={Math.round(((lead.qualificationScore || 5) + (lead.aestheticsScore || 5)) / 2)} />
                         <span className={`text-[10px] font-medium ${daysSince > 7 ? 'text-red-500' : daysSince > 3 ? 'text-amber-500' : 'text-emerald-500'
                             }`}>
                             {daysSince === 0 ? 'Today' : `${daysSince}d ago`}
@@ -252,7 +247,7 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
                         {lead.countryOrigin && ` • ${lead.countryOrigin}`}
                     </p>
                     <div className="flex items-center justify-between mt-2">
-                        <ScoreDots score={Math.round(((lead.qualificationScore || 5) + (lead.aestheticsScore || 5)) / 2)} />
+                        <ScoreLabel score={Math.round(((lead.qualificationScore || 5) + (lead.aestheticsScore || 5)) / 2)} />
                         <span className={`text-xs font-medium ${daysSince > 7 ? 'text-red-500' : daysSince > 3 ? 'text-amber-500' : 'text-emerald-500'
                             }`}>
                             {daysSince === 0 ? 'Today' : `${daysSince}d ago`}
