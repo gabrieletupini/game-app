@@ -31,6 +31,8 @@ export interface Lead {
     temperature: Temperature;
     lastInteractionDate?: string; // ISO date string
     stageEnteredAt: string; // ISO date string
+    deadFromStage?: FunnelStage; // Which stage lead was in when moved to Dead
+    deadNotes?: string; // Notes about why lead went dead
     createdAt: string; // ISO date string
     updatedAt: string; // ISO date string
 }
@@ -62,6 +64,7 @@ export interface UpdateLeadInput {
     originDetails?: string;
     temperature?: Temperature;
     lastInteractionDate?: string;
+    deadNotes?: string;
 }
 
 // Computed properties for leads

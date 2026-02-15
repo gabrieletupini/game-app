@@ -1,8 +1,10 @@
+import { useState, useRef, useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import type { Lead } from '../types'
-import { PLATFORM_ICONS, INTENTION_CONFIG } from '../utils/constants'
+import type { Lead, FunnelStage } from '../types'
+import { PLATFORM_ICONS, INTENTION_CONFIG, FUNNEL_STAGE_NAMES } from '../utils/constants'
 import { getDaysSince } from '../utils/dateHelpers'
+import { useGameStore } from '../store/useGameStore'
 
 interface LeadCardProps {
     lead: Lead
@@ -53,6 +55,48 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
         id: lead.id,
         data: { lead },
     })
+    const moveLeadToStage = useGameStore(state => state.moveLeadToStage)
+    const addToast = useGameStore(state => state.addToast)
+
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+    const menuRef = useRef<HTMLDivElement>(null)
+
+    // Close context menu on click outside
+    useEffect(() => {
+        if (!contextMenu) return
+        const handleClick = () => setContextMenu(null)
+        document.addEventListener('click', handleClick)
+        return () => document.removeEventListener('click', handleClick)
+    }, [contextMenu])
+
+    const handleContextMenu = (e: React.MouseEvent) => {
+        if (isDragOverlay) return
+        e.preventDefault()
+        e.stopPropagation()
+        setContextMenu({ x: e.clientX, y: e.clientY })
+    }
+
+    const handleMoveTo = (stage: FunnelStage) => {
+        if (lead.funnelStage === stage) return
+        moveLeadToStage(lead.id, stage)
+        setContextMenu(null)
+        if (stage === 'Lover') {
+            addToast({ type: 'success', title: '❤️ New Lover!', message: `${lead.name} promoted to Lover`, duration: 3000 })
+        } else if (stage === 'Dead') {
+            addToast({ type: 'info', title: '💀 Lead Archived', message: `${lead.name} moved to Dead Leads`, duration: 3000 })
+        } else {
+            addToast({ type: 'info', title: 'Lead Moved', message: `${lead.name} moved to ${FUNNEL_STAGE_NAMES[stage]}`, duration: 2000 })
+        }
+    }
+
+    const CONTEXT_MENU_ITEMS: { stage: FunnelStage; label: string; emoji: string; color: string }[] = [
+        { stage: 'Stage1', label: FUNNEL_STAGE_NAMES.Stage1, emoji: '1️⃣', color: 'hover:bg-blue-50 hover:text-blue-700' },
+        { stage: 'Stage2', label: FUNNEL_STAGE_NAMES.Stage2, emoji: '2️⃣', color: 'hover:bg-violet-50 hover:text-violet-700' },
+        { stage: 'Stage3', label: FUNNEL_STAGE_NAMES.Stage3, emoji: '3️⃣', color: 'hover:bg-amber-50 hover:text-amber-700' },
+        { stage: 'Stage4', label: FUNNEL_STAGE_NAMES.Stage4, emoji: '4️⃣', color: 'hover:bg-emerald-50 hover:text-emerald-700' },
+        { stage: 'Lover', label: 'Lover', emoji: '❤️', color: 'hover:bg-pink-50 hover:text-pink-700' },
+        { stage: 'Dead', label: 'Dead', emoji: '💀', color: 'hover:bg-red-50 hover:text-red-700' },
+    ]
 
     const style = transform
         ? { transform: CSS.Translate.toString(transform) }
@@ -74,6 +118,7 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
                 e.stopPropagation()
                 onClick?.(lead)
             }}
+            onContextMenu={handleContextMenu}
             className={`
         relative bg-white rounded-xl border border-slate-200 p-3 cursor-grab active:cursor-grabbing
         lead-card-hover select-none overflow-hidden group
@@ -81,6 +126,27 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
         ${isDragOverlay ? 'drag-overlay' : ''}
       `}
         >
+            {/* Right-click context menu */}
+            {contextMenu && (
+                <div
+                    ref={menuRef}
+                    className="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-slate-200 py-1.5 min-w-[200px] animate-fade-in"
+                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <p className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Move to…</p>
+                    {CONTEXT_MENU_ITEMS.filter(item => item.stage !== lead.funnelStage).map(item => (
+                        <button
+                            key={item.stage}
+                            onClick={(e) => { e.stopPropagation(); handleMoveTo(item.stage) }}
+                            className={`w-full text-left px-3 py-2 text-sm font-medium text-slate-700 flex items-center gap-2 transition-colors ${item.color}`}
+                        >
+                            <span>{item.emoji}</span>
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
+            )}
             {/* Temperature accent bar */}
             <div className={`absolute left-0 top-0 bottom-0 w-1 ${getAccentColor(lead.temperature)} rounded-l-xl`} />
 

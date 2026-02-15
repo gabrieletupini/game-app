@@ -252,10 +252,23 @@ export const useGameStore = create<GameStore>()(
 
         moveLeadToStage: (id: string, stage: FunnelStage) => {
             try {
-                const updates = {
+                const currentLead = get().leads.find(l => l.id === id);
+                const updates: Partial<Lead> = {
                     funnelStage: stage,
-                    stageEnteredAt: new Date().toISOString()
+                    stageEnteredAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
                 };
+
+                // Record which stage the lead died from
+                if (stage === 'Dead' && currentLead) {
+                    updates.deadFromStage = currentLead.funnelStage;
+                }
+
+                // Clear dead tracking when reviving
+                if (stage !== 'Dead') {
+                    updates.deadFromStage = undefined;
+                    updates.deadNotes = undefined;
+                }
 
                 const updatedLeads = get().leads.map(lead =>
                     lead.id === id ? { ...lead, ...updates } : lead
