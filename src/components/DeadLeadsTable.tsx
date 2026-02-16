@@ -8,12 +8,6 @@ interface DeadLeadsTableProps {
     onSelectLead: (lead: Lead) => void
 }
 
-function getOverallScore(lead: Lead) {
-    return ((lead.qualificationScore || 5) + (lead.aestheticsScore || 5)) / 2
-}
-
-const TOP_TIER_THRESHOLD = 7 // Overall score >= 7 is top tier
-
 export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
     const leads = useGameStore(state => state.leads)
     const moveLeadToStage = useGameStore(state => state.moveLeadToStage)
@@ -35,8 +29,8 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         })
 
-    const topTier = deadLeads.filter(l => getOverallScore(l) >= TOP_TIER_THRESHOLD)
-    const lowTier = deadLeads.filter(l => getOverallScore(l) < TOP_TIER_THRESHOLD)
+    const topTier = deadLeads.filter(l => l.coldTier === 'top')
+    const lowTier = deadLeads.filter(l => l.coldTier !== 'top')
 
     const handleRevive = (lead: Lead, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -105,7 +99,6 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
                                 <h4 className="font-semibold text-slate-900 truncate cursor-pointer hover:text-brand-600 transition" onClick={() => onSelectLead(lead)}>
                                     {lead.name}
                                 </h4>
-                                <span className="text-[10px] font-bold text-slate-400">{getOverallScore(lead).toFixed(1)}</span>
                                 {lead.deadFromStage && (
                                     <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getStageColor(lead.deadFromStage)}`}>
                                         ❄️ Froze in {FUNNEL_STAGE_NAMES[lead.deadFromStage] || lead.deadFromStage}
@@ -121,6 +114,23 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
 
                         {/* Action buttons */}
                         <div className="flex gap-1 flex-shrink-0">
+                            {lead.coldTier === 'top' ? (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); updateLead(lead.id, { coldTier: 'low' } as any); addToast({ type: 'info', title: 'Moved to Low Tier', message: `${lead.name} demoted`, duration: 1500 }) }}
+                                    title="Move to Low Tier"
+                                    className="p-1.5 bg-slate-50 rounded-lg border border-slate-200 text-amber-500 hover:text-slate-500 hover:border-slate-300 transition"
+                                >
+                                    <ArrowDownCircle className="w-3.5 h-3.5" />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); updateLead(lead.id, { coldTier: 'top' } as any); addToast({ type: 'success', title: 'Moved to Top Tier', message: `${lead.name} promoted`, duration: 1500 }) }}
+                                    title="Move to Top Tier"
+                                    className="p-1.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-400 hover:text-amber-500 hover:border-amber-300 transition"
+                                >
+                                    <Crown className="w-3.5 h-3.5" />
+                                </button>
+                            )}
                             <button
                                 onClick={(e) => startEditNotes(lead, e)}
                                 title="Add/edit notes"
@@ -254,7 +264,6 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
                                 <span className="text-sm font-bold text-amber-800">Top Tier</span>
                                 <span className="text-xs font-medium text-amber-500 bg-amber-100 px-1.5 py-0.5 rounded-full">{topTier.length}</span>
                             </div>
-                            <span className="text-[10px] text-slate-400">Score ≥ {TOP_TIER_THRESHOLD}</span>
                             {topTierOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                             <div className="flex-1 h-px bg-slate-100" />
                         </button>
@@ -280,7 +289,6 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
                                 <span className="text-sm font-bold text-slate-600">Low Tier</span>
                                 <span className="text-xs font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{lowTier.length}</span>
                             </div>
-                            <span className="text-[10px] text-slate-400">Score &lt; {TOP_TIER_THRESHOLD}</span>
                             {lowTierOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                             <div className="flex-1 h-px bg-slate-100" />
                         </button>

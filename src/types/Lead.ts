@@ -33,6 +33,7 @@ export interface Lead {
     originDetails?: string; // Where/how met
     instagramUrl?: string; // Instagram profile link
     isStarred?: boolean; // Pinned to top of lists
+    coldTier?: 'top' | 'low'; // Manual tier assignment for Cold Leads
     temperature: Temperature;
     lastInteractionDate?: string; // ISO date string
     lastResponseDate?: string; // ISO date string — last INCOMING interaction
@@ -78,6 +79,7 @@ export interface UpdateLeadInput {
     originDetails?: string;
     instagramUrl?: string;
     isStarred?: boolean;
+    coldTier?: 'top' | 'low';
     temperature?: Temperature;
     lastInteractionDate?: string;
     lastResponseDate?: string;
