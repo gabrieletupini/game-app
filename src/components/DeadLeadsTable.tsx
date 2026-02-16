@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Snowflake, RotateCcw, Trash2, MessageSquare, Check, X, HelpCircle } from 'lucide-react'
+import { Snowflake, RotateCcw, Trash2, MessageSquare, Check, X, HelpCircle, ChevronDown, ChevronUp, Crown, ArrowDownCircle } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import { FUNNEL_STAGE_NAMES } from '../utils/constants'
 import type { Lead } from '../types'
@@ -7,6 +7,12 @@ import type { Lead } from '../types'
 interface DeadLeadsTableProps {
     onSelectLead: (lead: Lead) => void
 }
+
+function getOverallScore(lead: Lead) {
+    return ((lead.qualificationScore || 5) + (lead.aestheticsScore || 5)) / 2
+}
+
+const TOP_TIER_THRESHOLD = 7 // Overall score >= 7 is top tier
 
 export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
     const leads = useGameStore(state => state.leads)
@@ -18,6 +24,8 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
     const [editingNotesId, setEditingNotesId] = useState<string | null>(null)
     const [notesValue, setNotesValue] = useState('')
     const [showHelp, setShowHelp] = useState(false)
+    const [topTierOpen, setTopTierOpen] = useState(true)
+    const [lowTierOpen, setLowTierOpen] = useState(true)
 
     const deadLeads = leads
         .filter(l => l.funnelStage === 'Dead')
@@ -26,6 +34,9 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
             if (!a.isStarred && b.isStarred) return 1
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         })
+
+    const topTier = deadLeads.filter(l => getOverallScore(l) >= TOP_TIER_THRESHOLD)
+    const lowTier = deadLeads.filter(l => getOverallScore(l) < TOP_TIER_THRESHOLD)
 
     const handleRevive = (lead: Lead, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -73,6 +84,103 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
             default: return 'bg-slate-100 text-slate-600 border-slate-200'
         }
     }
+
+    const renderLeadCard = (lead: Lead) => (
+        <div key={lead.id} className="relative group">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+                {/* Top section: lead card + stage badge */}
+                <div className="p-4 pb-2">
+                    <div className="flex items-start gap-3">
+                        {/* Avatar */}
+                        {lead.profilePhotoUrl ? (
+                            <img src={lead.profilePhotoUrl} alt={lead.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow flex-shrink-0" />
+                        ) : (
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center text-white font-bold text-lg shadow flex-shrink-0">
+                                {lead.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-semibold text-slate-900 truncate cursor-pointer hover:text-brand-600 transition" onClick={() => onSelectLead(lead)}>
+                                    {lead.name}
+                                </h4>
+                                <span className="text-[10px] font-bold text-slate-400">{getOverallScore(lead).toFixed(1)}</span>
+                                {lead.deadFromStage && (
+                                    <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getStageColor(lead.deadFromStage)}`}>
+                                        ❄️ Froze in {FUNNEL_STAGE_NAMES[lead.deadFromStage] || lead.deadFromStage}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-sm text-slate-500 mt-0.5">
+                                📍 {lead.platformOrigin}
+                                {lead.communicationPlatform?.length && !(lead.communicationPlatform.length === 1 && lead.communicationPlatform[0] === lead.platformOrigin) && ` → 💬 ${lead.communicationPlatform.join(', ')}`}
+                                {lead.countryOrigin ? ` • ${lead.countryOrigin}` : ''}
+                            </p>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-1 flex-shrink-0">
+                            <button
+                                onClick={(e) => startEditNotes(lead, e)}
+                                title="Add/edit notes"
+                                className="p-1.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-300 transition"
+                            >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={(e) => handleRevive(lead, e)}
+                                title={`Revive to ${lead.deadFromStage ? FUNNEL_STAGE_NAMES[lead.deadFromStage] || 'Stage 1' : 'Stage 1'}`}
+                                className="p-1.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300 transition"
+                            >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={(e) => handlePermanentDelete(lead, e)}
+                                title="Delete permanently"
+                                className="p-1.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-300 transition"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Notes section */}
+                {editingNotesId === lead.id ? (
+                    <div className="px-4 pb-4">
+                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                            <textarea
+                                value={notesValue}
+                                onChange={e => setNotesValue(e.target.value)}
+                                placeholder="Why did this lead go cold? Write your notes here..."
+                                rows={3}
+                                autoFocus
+                                className="w-full text-sm bg-transparent border-none outline-none resize-none text-slate-700 placeholder-slate-400"
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && e.metaKey) saveNotes(lead.id)
+                                    if (e.key === 'Escape') cancelEditNotes()
+                                }}
+                            />
+                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200">
+                                <span className="text-[10px] text-slate-400">⌘ Enter to save • Esc to cancel</span>
+                                <div className="flex gap-1.5">
+                                    <button onClick={cancelEditNotes} className="p-1 text-slate-400 hover:text-slate-600 transition"><X className="w-4 h-4" /></button>
+                                    <button onClick={() => saveNotes(lead.id)} className="p-1 text-emerald-500 hover:text-emerald-700 transition"><Check className="w-4 h-4" /></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : lead.deadNotes ? (
+                    <div className="px-4 pb-4 cursor-pointer" onClick={(e) => startEditNotes(lead, e)}>
+                        <div className="bg-amber-50/60 rounded-xl px-3 py-2 border border-amber-100">
+                            <p className="text-xs text-amber-800/80 line-clamp-2">📝 {lead.deadNotes}</p>
+                        </div>
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    )
 
     return (
         <div>
@@ -134,102 +242,58 @@ export default function DeadLeadsTable({ onSelectLead }: DeadLeadsTableProps) {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {deadLeads.map(lead => (
-                        <div key={lead.id} className="relative group">
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
-                                {/* Top section: lead card + stage badge */}
-                                <div className="p-4 pb-2">
-                                    <div className="flex items-start gap-3">
-                                        {/* Avatar */}
-                                        {lead.profilePhotoUrl ? (
-                                            <img src={lead.profilePhotoUrl} alt={lead.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow flex-shrink-0" />
-                                        ) : (
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center text-white font-bold text-lg shadow flex-shrink-0">
-                                                {lead.name.charAt(0).toUpperCase()}
-                                            </div>
-                                        )}
-
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h4 className="font-semibold text-slate-900 truncate cursor-pointer hover:text-brand-600 transition" onClick={() => onSelectLead(lead)}>
-                                                    {lead.name}
-                                                </h4>
-                                                {lead.deadFromStage && (
-                                                    <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getStageColor(lead.deadFromStage)}`}>
-                                                        ❄️ Froze in {FUNNEL_STAGE_NAMES[lead.deadFromStage] || lead.deadFromStage}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-sm text-slate-500 mt-0.5">
-                                                📍 {lead.platformOrigin}
-                                                {lead.communicationPlatform?.length && !(lead.communicationPlatform.length === 1 && lead.communicationPlatform[0] === lead.platformOrigin) && ` → 💬 ${lead.communicationPlatform.join(', ')}`}
-                                                {lead.countryOrigin ? ` • ${lead.countryOrigin}` : ''}
-                                            </p>
-                                        </div>
-
-                                        {/* Action buttons */}
-                                        <div className="flex gap-1 flex-shrink-0">
-                                            <button
-                                                onClick={(e) => startEditNotes(lead, e)}
-                                                title="Add/edit notes"
-                                                className="p-1.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-300 transition"
-                                            >
-                                                <MessageSquare className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => handleRevive(lead, e)}
-                                                title={`Revive to ${lead.deadFromStage ? FUNNEL_STAGE_NAMES[lead.deadFromStage] || 'Stage 1' : 'Stage 1'}`}
-                                                className="p-1.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300 transition"
-                                            >
-                                                <RotateCcw className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => handlePermanentDelete(lead, e)}
-                                                title="Delete permanently"
-                                                className="p-1.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-300 transition"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Notes section */}
-                                {editingNotesId === lead.id ? (
-                                    <div className="px-4 pb-4">
-                                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                                            <textarea
-                                                value={notesValue}
-                                                onChange={e => setNotesValue(e.target.value)}
-                                                placeholder="Why did this lead go cold? Write your notes here..."
-                                                rows={3}
-                                                autoFocus
-                                                className="w-full text-sm bg-transparent border-none outline-none resize-none text-slate-700 placeholder-slate-400"
-                                                onKeyDown={e => {
-                                                    if (e.key === 'Enter' && e.metaKey) saveNotes(lead.id)
-                                                    if (e.key === 'Escape') cancelEditNotes()
-                                                }}
-                                            />
-                                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200">
-                                                <span className="text-[10px] text-slate-400">⌘ Enter to save • Esc to cancel</span>
-                                                <div className="flex gap-1.5">
-                                                    <button onClick={cancelEditNotes} className="p-1 text-slate-400 hover:text-slate-600 transition"><X className="w-4 h-4" /></button>
-                                                    <button onClick={() => saveNotes(lead.id)} className="p-1 text-emerald-500 hover:text-emerald-700 transition"><Check className="w-4 h-4" /></button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : lead.deadNotes ? (
-                                    <div className="px-4 pb-4 cursor-pointer" onClick={(e) => startEditNotes(lead, e)}>
-                                        <div className="bg-amber-50/60 rounded-xl px-3 py-2 border border-amber-100">
-                                            <p className="text-xs text-amber-800/80 line-clamp-2">📝 {lead.deadNotes}</p>
-                                        </div>
-                                    </div>
-                                ) : null}
+                <div className="space-y-6">
+                    {/* Top Tier Section */}
+                    <div>
+                        <button
+                            onClick={() => setTopTierOpen(!topTierOpen)}
+                            className="flex items-center gap-2 mb-3 group w-full"
+                        >
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+                                <Crown className="w-4 h-4 text-amber-500" />
+                                <span className="text-sm font-bold text-amber-800">Top Tier</span>
+                                <span className="text-xs font-medium text-amber-500 bg-amber-100 px-1.5 py-0.5 rounded-full">{topTier.length}</span>
                             </div>
-                        </div>
-                    ))}
+                            <span className="text-[10px] text-slate-400">Score ≥ {TOP_TIER_THRESHOLD}</span>
+                            {topTierOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                            <div className="flex-1 h-px bg-slate-100" />
+                        </button>
+                        {topTierOpen && (
+                            topTier.length > 0 ? (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {topTier.map(renderLeadCard)}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-400 italic pl-3 pb-2">No top tier cold leads</p>
+                            )
+                        )}
+                    </div>
+
+                    {/* Low Tier Section */}
+                    <div>
+                        <button
+                            onClick={() => setLowTierOpen(!lowTierOpen)}
+                            className="flex items-center gap-2 mb-3 group w-full"
+                        >
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200">
+                                <ArrowDownCircle className="w-4 h-4 text-slate-400" />
+                                <span className="text-sm font-bold text-slate-600">Low Tier</span>
+                                <span className="text-xs font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{lowTier.length}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400">Score &lt; {TOP_TIER_THRESHOLD}</span>
+                            {lowTierOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                            <div className="flex-1 h-px bg-slate-100" />
+                        </button>
+                        {lowTierOpen && (
+                            lowTier.length > 0 ? (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {lowTier.map(renderLeadCard)}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-400 italic pl-3 pb-2">No low tier cold leads</p>
+                            )
+                        )}
+                    </div>
                 </div>
             )}
         </div>
