@@ -26,31 +26,19 @@ function stripUndefined<T>(obj: T): T {
 }
 
 // Strip base64 photo data from leads before writing to Firestore.
-// Firestore has a 1MB document limit; base64 images can easily blow past that.
-// Photos are kept in localStorage and merged back on load.
-function stripPhotosForFirestore(leads: Lead[]): Lead[] {
+// Firebase Storage URLs are small strings and safe to store.
+// Only base64 "data:" strings are stripped (they'd blow past the 1MB doc limit).
+function stripBase64Photos(leads: Lead[]): Lead[] {
     return leads.map(lead => {
-        const stripped = { ...lead };
-        delete (stripped as any).profilePhotoUrl;
-        delete (stripped as any).photos;
-        return stripped;
-    });
-}
-
-// Re-attach photos from localStorage cache to Firestore leads
-function reattachPhotos(firestoreLeads: Lead[], localLeads: Lead[]): Lead[] {
-    const localMap = new Map(localLeads.map(l => [l.id, l]));
-    return firestoreLeads.map(lead => {
-        const local = localMap.get(lead.id);
-        if (local) {
-            if (local.profilePhotoUrl && !lead.profilePhotoUrl) {
-                lead = { ...lead, profilePhotoUrl: local.profilePhotoUrl };
-            }
-            if (local.photos?.length && (!lead.photos || lead.photos.length === 0)) {
-                lead = { ...lead, photos: local.photos };
-            }
+        const cleaned = { ...lead };
+        if (cleaned.profilePhotoUrl?.startsWith('data:')) {
+            delete (cleaned as any).profilePhotoUrl;
         }
-        return lead;
+        if (cleaned.photos?.some(p => p.startsWith('data:'))) {
+            cleaned.photos = cleaned.photos.filter(p => !p.startsWith('data:'));
+            if (cleaned.photos.length === 0) delete (cleaned as any).photos;
+        }
+        return cleaned;
     });
 }
 
@@ -140,16 +128,13 @@ class FirestoreService {
 
                 if (snapshot.exists()) {
                     const data = snapshot.data() as AppData
-                    // Re-attach photos from localStorage (they are stripped from Firestore to save space)
-                    const localLeads = localStorageService.getLeads();
-                    const leadsWithPhotos = reattachPhotos(data.leads || [], localLeads);
-                    // Update localStorage cache (with photos preserved)
-                    localStorageService.saveLeads(leadsWithPhotos)
+                    // Update localStorage cache
+                    localStorageService.saveLeads(data.leads || [])
                     localStorageService.saveInteractions(data.interactions || [])
                     if (data.settings) localStorageService.saveSettings(data.settings)
 
                     if (this.onDataChange) {
-                        this.onDataChange({ ...data, leads: leadsWithPhotos })
+                        this.onDataChange(data)
                     }
                 }
             },
@@ -179,14 +164,11 @@ class FirestoreService {
 
             if (snapshot.exists()) {
                 const data = snapshot.data() as AppData
-                // Re-attach photos from localStorage (they are stripped from Firestore to save space)
-                const localLeads = localStorageService.getLeads();
-                const leadsWithPhotos = reattachPhotos(data.leads || [], localLeads);
-                // Sync to localStorage cache (with photos preserved)
-                localStorageService.saveLeads(leadsWithPhotos)
+                // Sync to localStorage cache
+                localStorageService.saveLeads(data.leads || [])
                 localStorageService.saveInteractions(data.interactions || [])
                 if (data.settings) localStorageService.saveSettings(data.settings)
-                return { ...data, leads: leadsWithPhotos }
+                return data
             }
 
             // Document doesn't exist yet — check localStorage for existing data
@@ -225,10 +207,10 @@ class FirestoreService {
         if (data.interactions) localStorageService.saveInteractions(data.interactions)
         if (data.settings) localStorageService.saveSettings(data.settings)
 
-        // Strip photos before Firestore write (keep under 1MB doc limit)
+        // Strip any remaining base64 photos before Firestore write (URLs are fine)
         const payload = {
             ...data,
-            leads: data.leads ? stripPhotosForFirestore(data.leads) : undefined,
+            leads: data.leads ? stripBase64Photos(data.leads) : undefined,
             updatedAt: now,
         }
 
@@ -251,8 +233,8 @@ class FirestoreService {
     async saveLeads(leads: Lead[]): Promise<void> {
         localStorageService.saveLeads(leads)
 
-        // Strip photos before Firestore write (keep under 1MB doc limit)
-        const leadsForFirestore = stripPhotosForFirestore(leads);
+        // Strip any remaining base64 photos before Firestore write (URLs are fine)
+        const leadsForFirestore = stripBase64Photos(leads);
 
         // If a write is already in flight, queue the latest data (previous queued data is discarded)
         this.pendingLeadsWrite = leadsForFirestore

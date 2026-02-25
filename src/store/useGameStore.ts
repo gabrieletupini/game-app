@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { localStorageService } from '../services/localStorage';
 import { firestoreService } from '../services/firestoreService';
+import { photoStorageService } from '../services/photoStorage';
 import type { SyncStatus } from '../services/firestoreService';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -270,6 +271,7 @@ export const useGameStore = create<GameStore>()(
                     id: uuidv4(),
                     name: input.name,
                     profilePhotoUrl: input.profilePhotoUrl,
+                    photos: input.photos,
                     platformOrigin: input.platformOrigin,
                     communicationPlatform: input.communicationPlatform?.length ? input.communicationPlatform : [input.platformOrigin],
                     countryOrigin: input.countryOrigin,
@@ -280,6 +282,7 @@ export const useGameStore = create<GameStore>()(
                     datingIntention: input.datingIntention || 'Undecided',
                     funnelStage: input.funnelStage || 'Stage1',
                     originDetails: input.originDetails,
+                    instagramUrl: input.instagramUrl,
                     temperature: 'Hot',
                     temperatureHistory: [{ date: now, temperature: 'Hot' as Temperature }],
                     stageEnteredAt: now,
@@ -290,6 +293,23 @@ export const useGameStore = create<GameStore>()(
                 const updatedLeads = [...get().leads, newLead];
                 set({ leads: updatedLeads });
                 firestoreService.saveLeads(updatedLeads);
+
+                // Upload base64 photos to Firebase Storage in the background
+                // Once uploaded, update the lead with the download URL
+                if (newLead.profilePhotoUrl && photoStorageService.isBase64(newLead.profilePhotoUrl)) {
+                    photoStorageService.ensureUploaded(newLead.profilePhotoUrl, newLead.id, 'profile')
+                        .then(url => {
+                            get().updateLead(newLead.id, { profilePhotoUrl: url } as any);
+                        })
+                        .catch(err => console.warn('Photo upload failed:', err));
+                }
+                if (newLead.photos?.length) {
+                    Promise.all(
+                        newLead.photos.map(p => photoStorageService.ensureUploaded(p, newLead.id, 'gallery'))
+                    ).then(urls => {
+                        get().updateLead(newLead.id, { photos: urls } as any);
+                    }).catch(err => console.warn('Gallery upload failed:', err));
+                }
 
                 get().addToast({
                     type: 'success',
@@ -334,6 +354,25 @@ export const useGameStore = create<GameStore>()(
                 });
                 set({ leads: updatedLeads });
                 firestoreService.saveLeads(updatedLeads);
+
+                // Upload base64 photos to Firebase Storage in the background
+                const profilePhoto = cleanUpdates.profilePhotoUrl as string | undefined;
+                if (profilePhoto && photoStorageService.isBase64(profilePhoto)) {
+                    photoStorageService.ensureUploaded(profilePhoto, id, 'profile')
+                        .then(url => {
+                            // Update again with the Storage URL (no infinite loop: URL won't be base64)
+                            get().updateLead(id, { profilePhotoUrl: url } as any);
+                        })
+                        .catch(err => console.warn('Photo upload failed:', err));
+                }
+                const photos = cleanUpdates.photos as string[] | undefined;
+                if (photos?.some(p => photoStorageService.isBase64(p))) {
+                    Promise.all(
+                        photos.map(p => photoStorageService.ensureUploaded(p, id, 'gallery'))
+                    ).then(urls => {
+                        get().updateLead(id, { photos: urls } as any);
+                    }).catch(err => console.warn('Gallery upload failed:', err));
+                }
             } catch (error) {
                 get().setError({
                     hasError: true,
