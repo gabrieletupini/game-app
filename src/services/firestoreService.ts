@@ -25,20 +25,48 @@ function stripUndefined<T>(obj: T): T {
     return obj;
 }
 
-// Strip base64 photo data from leads before writing to Firestore.
-// Firebase Storage URLs are small strings and safe to store.
-// Only base64 "data:" strings are stripped (they'd blow past the 1MB doc limit).
-function stripBase64Photos(leads: Lead[]): Lead[] {
-    return leads.map(lead => {
+// Compress base64 photos into tiny thumbnails for Firestore storage.
+// Firestore has a 1MB doc limit; we compress profile photos to ~100x100 JPEG
+// at low quality (~5-10KB each), which allows ~50+ leads with photos.
+// Gallery photos are stripped entirely (too many/too large).
+function compressPhotosForFirestore(leads: Lead[]): Promise<Lead[]> {
+    return Promise.all(leads.map(async lead => {
         const cleaned = { ...lead };
+        // Compress profile photo to tiny thumbnail
         if (cleaned.profilePhotoUrl?.startsWith('data:')) {
-            delete (cleaned as any).profilePhotoUrl;
+            try {
+                cleaned.profilePhotoUrl = await compressBase64(cleaned.profilePhotoUrl, 100, 0.5);
+            } catch {
+                delete (cleaned as any).profilePhotoUrl;
+            }
         }
+        // Strip gallery photos from Firestore (too large)
         if (cleaned.photos?.some(p => p.startsWith('data:'))) {
             cleaned.photos = cleaned.photos.filter(p => !p.startsWith('data:'));
             if (cleaned.photos.length === 0) delete (cleaned as any).photos;
         }
         return cleaned;
+    }));
+}
+
+// Compress a base64 image to a small JPEG thumbnail
+function compressBase64(base64: string, maxSize: number, quality: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+            else { w = Math.round(w * maxSize / h); h = maxSize; }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { reject(new Error('no ctx')); return; }
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = base64;
     });
 }
 
@@ -202,15 +230,16 @@ class FirestoreService {
     async saveAll(data: Partial<AppData>): Promise<void> {
         const now = new Date().toISOString()
 
-        // Always save to localStorage immediately (fast, offline-safe) — with photos
+        // Always save to localStorage immediately (fast, offline-safe) — with full-res photos
         if (data.leads) localStorageService.saveLeads(data.leads)
         if (data.interactions) localStorageService.saveInteractions(data.interactions)
         if (data.settings) localStorageService.saveSettings(data.settings)
 
-        // Strip any remaining base64 photos before Firestore write (URLs are fine)
+        // Compress photos into tiny thumbnails for Firestore (stays under 1MB)
+        const compressedLeads = data.leads ? await compressPhotosForFirestore(data.leads) : undefined;
         const payload = {
             ...data,
-            leads: data.leads ? stripBase64Photos(data.leads) : undefined,
+            leads: compressedLeads,
             updatedAt: now,
         }
 
@@ -233,8 +262,8 @@ class FirestoreService {
     async saveLeads(leads: Lead[]): Promise<void> {
         localStorageService.saveLeads(leads)
 
-        // Strip any remaining base64 photos before Firestore write (URLs are fine)
-        const leadsForFirestore = stripBase64Photos(leads);
+        // Compress photos into tiny thumbnails for Firestore (stays under 1MB)
+        const leadsForFirestore = await compressPhotosForFirestore(leads);
 
         // If a write is already in flight, queue the latest data (previous queued data is discarded)
         this.pendingLeadsWrite = leadsForFirestore
