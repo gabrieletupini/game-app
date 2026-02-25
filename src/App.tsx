@@ -21,6 +21,7 @@ import { exportLeadsToExcel } from './services/excelService'
 function App() {
     const { user, loading: authLoading } = useAuth()
     const loadData = useGameStore(state => state.loadData)
+    const resetForReload = useGameStore(state => state.resetForReload)
     const loading = useGameStore(state => state.loading)
 
     const [activeTab, setActiveTab] = useState<Tab>('funnel')
@@ -30,12 +31,13 @@ function App() {
     const [showWeeklyCheckIn, setShowWeeklyCheckIn] = useState(false)
 
     useEffect(() => {
-        if (user) loadData()
-        // Cleanup: unsubscribe from Firestore real-time listener on unmount
-        return () => {
-            // firestoreService handles cleanup internally when subscribeToChanges is called again
+        if (user) {
+            loadData()
+        } else {
+            // User logged out — reset store so fresh data loads on next login
+            resetForReload()
         }
-    }, [loadData, user])
+    }, [loadData, resetForReload, user])
 
     // Show weekly check-in once data has loaded
     const leads = useGameStore(state => state.leads)

@@ -111,6 +111,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const logout = async () => {
+        // Clear localStorage to prevent stale data from poisoning future merges
+        // on this or other devices
+        try {
+            localStorage.removeItem('gameApp_leads');
+            localStorage.removeItem('gameApp_interactions');
+            localStorage.removeItem('gameApp_settings');
+        } catch (_) { /* ignore */ }
         await signOut(auth)
     }
 

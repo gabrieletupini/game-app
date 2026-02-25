@@ -29,20 +29,24 @@ function DateFlowLogo({ className = 'w-9 h-9' }: { className?: string }) {
 function SyncIndicator() {
     const syncStatus = useGameStore(state => state.syncStatus)
     const syncError = useGameStore(state => state.syncError)
+    const forceSyncToCloud = useGameStore(state => state.forceSyncToCloud)
     const [showTooltip, setShowTooltip] = useState(false)
 
     const config: Record<SyncStatus, { color: string; pulse: boolean; label: string }> = {
         connecting: { color: 'bg-amber-400', pulse: true, label: 'Connecting to cloud...' },
-        synced: { color: 'bg-emerald-400', pulse: false, label: 'Synced — data is saved to cloud' },
-        error: { color: 'bg-red-500', pulse: true, label: syncError ? `Sync error: ${syncError}` : 'Sync error — data only saved locally' },
-        offline: { color: 'bg-slate-400', pulse: false, label: 'Offline — data saved locally' },
+        synced: { color: 'bg-emerald-400', pulse: false, label: 'Synced — click to force push' },
+        error: { color: 'bg-red-500', pulse: true, label: syncError ? `Sync error: ${syncError}` : 'Sync error — click to retry' },
+        offline: { color: 'bg-slate-400', pulse: false, label: 'Offline — click to retry' },
     }
 
     const { color, pulse, label } = config[syncStatus]
 
     return (
         <div className="relative" onMouseEnter={() => setShowTooltip(true)} onMouseLeave={() => setShowTooltip(false)}>
-            <div className={`w-2.5 h-2.5 rounded-full ${color} ${pulse ? 'animate-pulse' : ''} cursor-help`} />
+            <button
+                onClick={forceSyncToCloud}
+                className={`w-2.5 h-2.5 rounded-full ${color} ${pulse ? 'animate-pulse' : ''} cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-purple-300 transition`}
+            />
             {showTooltip && (
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-lg">
                     {label}

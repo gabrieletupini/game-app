@@ -167,6 +167,8 @@ interface GameStore {
     exportData: () => string;
     importData: (jsonData: string) => Promise<void>;
     clearAllData: () => void;
+    forceSyncToCloud: () => void;
+    resetForReload: () => void;
     calculateLeadTemperature: (leadId: string) => Temperature;
     recalculateAllTemperatures: () => void;
 }
@@ -711,6 +713,25 @@ export const useGameStore = create<GameStore>()(
             } finally {
                 get().setLoading({ isLoading: false });
             }
+        },
+
+        forceSyncToCloud: () => {
+            const leads = get().leads;
+            const interactions = get().interactions;
+            firestoreService.saveAll({ leads, interactions, settings: get().settings });
+            get().addToast({
+                type: 'success',
+                title: 'Sync Pushed',
+                message: `Force-pushed ${leads.length} leads to cloud`,
+                duration: 2000,
+            });
+        },
+
+        resetForReload: () => {
+            // Reset the module-level guard so loadData can run again after re-login
+            dataLoaded = false;
+            firestoreService.unsubscribeFromChanges();
+            set({ leads: [], interactions: [], settings: DEFAULT_SETTINGS, syncStatus: 'connecting' as SyncStatus });
         },
 
         clearAllData: () => {
