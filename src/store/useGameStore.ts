@@ -42,36 +42,6 @@ function normalizeLeads(leads: Lead[]): Lead[] {
     return leads.map(normalizeLead);
 }
 
-/** Merge two lead arrays: for leads in both, pick the one with the more recent updatedAt.
- *  Leads only in one source are always kept. */
-function mergeLeads(localLeads: Lead[], remoteLeads: Lead[]): Lead[] {
-    const localMap = new Map(localLeads.map(l => [l.id, l]));
-    const remoteMap = new Map(remoteLeads.map(l => [l.id, l]));
-    const allIds = new Set([...localMap.keys(), ...remoteMap.keys()]);
-    const merged: Lead[] = [];
-
-    for (const id of allIds) {
-        const local = localMap.get(id);
-        const remote = remoteMap.get(id);
-        if (local && remote) {
-            // Pick whichever was updated more recently
-            merged.push(new Date(local.updatedAt) >= new Date(remote.updatedAt) ? local : remote);
-        } else {
-            merged.push((local || remote)!);
-        }
-    }
-    return merged;
-}
-
-/** Merge two interaction arrays: union by ID. */
-function mergeInteractions(localInts: Interaction[], remoteInts: Interaction[]): Interaction[] {
-    const map = new Map(localInts.map(i => [i.id, i]));
-    for (const ri of remoteInts) {
-        if (!map.has(ri.id)) map.set(ri.id, ri);
-    }
-    return Array.from(map.values());
-}
-
 // Default settings
 const DEFAULT_SETTINGS: AppSettings = {
     user: {},
@@ -216,21 +186,28 @@ export const useGameStore = create<GameStore>()(
             // overwriting newer data from other devices (race condition).
             // Temperature recalculation happens only AFTER Firestore hydration below.
 
-            // Then hydrate from Firestore (async)
+            // Then hydrate from Firestore (async) — Firestore is the SOURCE OF TRUTH.
+            // We do NOT merge with localStorage; Firestore always wins.
+            // localStorage is just a fast-startup cache, not an authoritative source.
             firestoreService.loadAll().then(data => {
-                const incomingLeads = normalizeLeads(data.leads || []);
-                const incomingInteractions = data.interactions || [];
-                const mergedLeads = mergeLeads(get().leads, incomingLeads);
-                const mergedInteractions = mergeInteractions(get().interactions, incomingInteractions);
+                const firestoreLeads = normalizeLeads(data.leads || []);
+                const firestoreInteractions = data.interactions || [];
 
-                set({
-                    leads: mergedLeads,
-                    interactions: mergedInteractions,
-                    settings: data.settings || DEFAULT_SETTINGS,
-                });
-
-                // Push merged state back if we had local-only or newer-local data
-                firestoreService.saveLeads(mergedLeads);
+                if (firestoreLeads.length > 0 || firestoreInteractions.length > 0) {
+                    // Firestore has data — use it as-is
+                    set({
+                        leads: firestoreLeads,
+                        interactions: firestoreInteractions,
+                        settings: data.settings || DEFAULT_SETTINGS,
+                    });
+                }
+                // If Firestore was empty but localStorage had data, the initial
+                // localStorage load above already set the state. Push it to Firestore
+                // to seed the cloud for other devices.
+                else if (get().leads.length > 0) {
+                    firestoreService.saveLeads(get().leads);
+                    firestoreService.saveInteractions(get().interactions);
+                }
 
                 // Recalculate temperatures AFTER hydration (safe: we have the latest data)
                 setTimeout(() => get().recalculateAllTemperatures(), 100);
@@ -241,22 +218,16 @@ export const useGameStore = create<GameStore>()(
             });
 
             // Subscribe to real-time updates from other devices/tabs
+            // Firestore is authoritative — just accept whatever it sends.
             firestoreService.subscribeToChanges((data) => {
                 const incomingLeads = normalizeLeads(data.leads || []);
                 const incomingInteractions = data.interactions || [];
-                const mergedLeads = mergeLeads(get().leads, incomingLeads);
-                const mergedInteractions = mergeInteractions(get().interactions, incomingInteractions);
-                const needsResync = mergedLeads.length !== incomingLeads.length ||
-                    mergedLeads.some((l, i) => l !== incomingLeads[i]);
 
                 set({
-                    leads: mergedLeads,
-                    interactions: mergedInteractions,
+                    leads: incomingLeads,
+                    interactions: incomingInteractions,
                     settings: data.settings || get().settings,
                 });
-
-                // Re-sync if local had newer or extra data
-                if (needsResync) firestoreService.saveLeads(mergedLeads);
             });
         },
 
