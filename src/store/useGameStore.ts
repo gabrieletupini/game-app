@@ -209,8 +209,10 @@ export const useGameStore = create<GameStore>()(
                 error: { hasError: false }
             });
 
-            // Recalculate temperatures on load (time-based decay)
-            setTimeout(() => get().recalculateAllTemperatures(), 100);
+            // NOTE: Do NOT recalculate temperatures here — it would write stale
+            // localStorage data to Firestore BEFORE the hydration merge, potentially
+            // overwriting newer data from other devices (race condition).
+            // Temperature recalculation happens only AFTER Firestore hydration below.
 
             // Then hydrate from Firestore (async)
             firestoreService.loadAll().then(data => {
@@ -228,10 +230,12 @@ export const useGameStore = create<GameStore>()(
                 // Push merged state back if we had local-only or newer-local data
                 firestoreService.saveLeads(mergedLeads);
 
-                // Recalculate after Firestore hydration too
+                // Recalculate temperatures AFTER hydration (safe: we have the latest data)
                 setTimeout(() => get().recalculateAllTemperatures(), 100);
             }).catch(err => {
                 console.warn('Firestore hydration failed, using localStorage cache:', err);
+                // Firestore unavailable — recalculate with whatever localStorage had
+                setTimeout(() => get().recalculateAllTemperatures(), 100);
             });
 
             // Subscribe to real-time updates from other devices/tabs
