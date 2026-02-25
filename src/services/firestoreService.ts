@@ -12,6 +12,19 @@ import { db } from './firebase'
 import { localStorageService } from './localStorage'
 import type { Lead, Interaction, AppSettings } from '../types'
 
+// Firestore rejects `undefined` field values — strip them recursively
+function stripUndefined<T>(obj: T): T {
+    if (Array.isArray(obj)) return obj.map(stripUndefined) as T;
+    if (obj !== null && typeof obj === 'object') {
+        const clean: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+            if (v !== undefined) clean[k] = stripUndefined(v);
+        }
+        return clean as T;
+    }
+    return obj;
+}
+
 // Firestore document paths — we store all data in a single user doc
 // (Since this is a single-user app, we use a fixed doc ID)
 const USER_DOC = 'default'
@@ -181,7 +194,7 @@ class FirestoreService {
         // Then save to Firestore (async, might fail if offline)
         try {
             this.writeCounter++
-            await setDoc(DATA_DOC_REF, payload, { merge: true })
+            await setDoc(DATA_DOC_REF, stripUndefined(payload), { merge: true })
             this.setSyncStatus('synced')
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error)
@@ -208,7 +221,7 @@ class FirestoreService {
             const dataToWrite = this.pendingLeadsWrite
             this.pendingLeadsWrite = null
             try {
-                await setDoc(DATA_DOC_REF, { leads: dataToWrite, updatedAt: new Date().toISOString() }, { merge: true })
+                await setDoc(DATA_DOC_REF, stripUndefined({ leads: dataToWrite, updatedAt: new Date().toISOString() }), { merge: true })
                 this.setSyncStatus('synced')
             } catch (error) {
                 const msg = error instanceof Error ? error.message : String(error)
@@ -236,7 +249,7 @@ class FirestoreService {
             const dataToWrite = this.pendingInteractionsWrite
             this.pendingInteractionsWrite = null
             try {
-                await setDoc(DATA_DOC_REF, { interactions: dataToWrite, updatedAt: new Date().toISOString() }, { merge: true })
+                await setDoc(DATA_DOC_REF, stripUndefined({ interactions: dataToWrite, updatedAt: new Date().toISOString() }), { merge: true })
                 this.setSyncStatus('synced')
             } catch (error) {
                 const msg = error instanceof Error ? error.message : String(error)
@@ -255,7 +268,7 @@ class FirestoreService {
         localStorageService.saveSettings(settings)
         try {
             this.writeCounter++
-            await setDoc(DATA_DOC_REF, { settings, updatedAt: new Date().toISOString() }, { merge: true })
+            await setDoc(DATA_DOC_REF, stripUndefined({ settings, updatedAt: new Date().toISOString() }), { merge: true })
             this.setSyncStatus('synced')
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error)
