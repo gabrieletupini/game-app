@@ -276,7 +276,11 @@ export const useGameStore = create<GameStore>()(
                 if (history.length === 0 || history[history.length - 1].temperature !== newTemp) {
                     history.push({ date: now, temperature: newTemp });
                 }
-                return { ...lead, temperature: newTemp, temperatureHistory: history, updatedAt: now };
+                // NOTE: Do NOT update `updatedAt` here. Temperature is a derived
+                // computation (time-based decay). Only real user actions should touch
+                // `updatedAt`, otherwise the merge logic on other devices will think
+                // these stale leads are "newer" and pick them over the correct Firestore data.
+                return { ...lead, temperature: newTemp, temperatureHistory: history };
             });
 
             if (changed) {

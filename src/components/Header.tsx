@@ -120,9 +120,10 @@ export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload
                         <button
                             onClick={logout}
                             title={user?.email ? `Logout (${user.email})` : 'Logout'}
-                            className="p-2.5 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition hidden sm:flex items-center justify-center"
+                            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 border border-transparent hover:border-red-200 transition"
                         >
                             <LogOut className="w-4 h-4" />
+                            <span className="text-xs font-medium hidden sm:inline">Logout</span>
                         </button>
                         <button
                             onClick={onCheckIn}
