@@ -12,8 +12,6 @@ export type PlatformOrigin =
     | 'Offline'
     | 'Other';
 
-export type Temperature = 'Cold' | 'Warm' | 'Hot';
-
 export type DatingIntention = 'Short Term' | 'Long Term' | 'Long Term Open to Short' | 'Casual' | 'Exploring' | 'Undecided';
 
 export interface Lead {
@@ -34,12 +32,7 @@ export interface Lead {
     instagramUrl?: string; // Instagram profile link
     isStarred?: boolean; // Pinned to top of lists
     coldTier?: 'top' | 'low'; // Manual tier assignment for Cold Leads
-    temperature: Temperature;
-    lastInteractionDate?: string; // ISO date string
-    lastResponseDate?: string; // ISO date string — last INCOMING interaction
-    temperatureHistory?: { date: string; temperature: Temperature }[]; // timeline snapshots
-    temperatureNotes?: string; // Notes explaining temperature context (e.g. why it got cold)
-    temperatureRefDate?: string; // Virtual reference date for manual temp edits — decay continues from here
+    lastInteractionDate?: string; // ISO date string — last time we talked / watered
     stageEnteredAt: string; // ISO date string
     deadFromStage?: FunnelStage; // Which stage lead was in when moved to Dead
     deadNotes?: string; // Notes about why lead went dead
@@ -80,12 +73,7 @@ export interface UpdateLeadInput {
     instagramUrl?: string;
     isStarred?: boolean;
     coldTier?: 'top' | 'low';
-    temperature?: Temperature;
     lastInteractionDate?: string;
-    lastResponseDate?: string;
-    temperatureHistory?: { date: string; temperature: Temperature }[];
-    temperatureNotes?: string;
-    temperatureRefDate?: string;
     deadNotes?: string;
 }
 
@@ -93,15 +81,12 @@ export interface UpdateLeadInput {
 export interface LeadWithComputedProps extends Lead {
     daysSinceLastSpoken: number;
     stageDisplayName: string;
-    temperatureColor: string;
-    temperatureIcon: string;
     qualificationStars: number;
 }
 
 // Lead filtering and sorting options
 export interface LeadFilters {
     platforms?: PlatformOrigin[];
-    temperatures?: Temperature[];
     stages?: FunnelStage[];
     qualificationRange?: [number, number];
     countries?: string[];
@@ -116,8 +101,7 @@ export type LeadSortField =
     | 'qualificationScore'
     | 'lastInteractionDate'
     | 'createdAt'
-    | 'stageEnteredAt'
-    | 'temperature';
+    | 'stageEnteredAt';
 
 export interface LeadSortOptions {
     field: LeadSortField;

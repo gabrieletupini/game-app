@@ -37,11 +37,6 @@ export interface FunnelSettings {
         stage3ToStage4Days: number;
         stage4ToLoverDays: number;
     };
-    temperatureThresholds: {
-        coldAfterDays: number;
-        warmMinInteractions: number;
-        hotMinInteractions: number;
-    };
 }
 
 export interface AppSettings {

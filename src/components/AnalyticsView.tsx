@@ -2,9 +2,10 @@ import { useMemo } from 'react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import { useGameStore } from '../store/useGameStore'
-import { Users, Heart, TrendingUp, Flame, Thermometer, Snowflake, Calendar } from 'lucide-react'
+import { Users, Heart, TrendingUp, Calendar } from 'lucide-react'
 import OriginChart from './OriginChart'
 import { formatDate } from '../utils/dateHelpers'
+import { getWaterCountThisWeek, getPlantHealth, WEEKLY_GOAL } from '../utils/gardenHelpers'
 
 ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale, PointElement, LineElement)
 
@@ -12,12 +13,21 @@ export default function AnalyticsView() {
     const leads = useGameStore(state => state.leads)
     const interactions = useGameStore(state => state.interactions)
     const getFunnelStats = useGameStore(state => state.getFunnelStats)
-    const getTemperatureDistribution = useGameStore(state => state.getTemperatureDistribution)
 
     const stats = getFunnelStats()
-    const tempDist = getTemperatureDistribution()
 
     const activeLeads = leads.filter(l => l.funnelStage !== 'Dead')
+
+    // This week's garden — how connections are doing against the 1-3x/week goal
+    const garden = useMemo(() => {
+        const buckets = { thriving: 0, growing: 0, wilting: 0 }
+        leads
+            .filter(l => l.funnelStage !== 'Dead' && l.funnelStage !== 'Lover')
+            .forEach(l => {
+                buckets[getPlantHealth(getWaterCountThisWeek(interactions, l.id)).stage]++
+            })
+        return buckets
+    }, [leads, interactions])
 
     // Funnel visualization data
     const funnelData = useMemo(() => ({
@@ -67,25 +77,19 @@ export default function AnalyticsView() {
         },
     }
 
-    // Temperature chart data
-    const tempData = useMemo(() => {
-        const hot = tempDist.find(t => t.temperature === 'Hot')?.count || 0
-        const warm = tempDist.find(t => t.temperature === 'Warm')?.count || 0
-        const cold = tempDist.find(t => t.temperature === 'Cold')?.count || 0
+    // Garden chart data — this week's plant health
+    const gardenData = useMemo(() => ({
+        labels: ['Thriving', 'Growing', 'Needs water'],
+        datasets: [{
+            data: [garden.thriving, garden.growing, garden.wilting],
+            backgroundColor: ['#34D399', '#FBBF24', '#FB7185'],
+            borderColor: '#ffffff',
+            borderWidth: 3,
+            hoverOffset: 6,
+        }],
+    }), [garden])
 
-        return {
-            labels: ['Hot', 'Warm', 'Cold'],
-            datasets: [{
-                data: [hot, warm, cold],
-                backgroundColor: ['#EF4444', '#F59E0B', '#3B82F6'],
-                borderColor: '#ffffff',
-                borderWidth: 3,
-                hoverOffset: 6,
-            }],
-        }
-    }, [tempDist])
-
-    const tempOptions = {
+    const gardenOptions = {
         responsive: true,
         maintainAspectRatio: false,
         cutout: '60%',
@@ -158,23 +162,24 @@ export default function AnalyticsView() {
                     )}
                 </div>
 
-                {/* Temperature Distribution */}
+                {/* This Week's Garden */}
                 <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                    <h3 className="text-sm font-bold text-slate-900 mb-4">Temperature Distribution</h3>
+                    <h3 className="text-sm font-bold text-slate-900 mb-1">🌿 This Week's Garden</h3>
+                    <p className="text-xs text-slate-400 mb-4">How your connections are doing against the {WEEKLY_GOAL}×/week goal</p>
                     {activeLeads.length === 0 ? (
                         <div className="flex items-center justify-center h-48 text-sm text-slate-400">
-                            Add leads to see temperature data
+                            Add connections to see your garden
                         </div>
                     ) : (
                         <div className="flex items-center gap-6">
                             <div className="relative w-36 h-36 flex-shrink-0">
-                                <Doughnut data={tempData} options={tempOptions} />
+                                <Doughnut data={gardenData} options={gardenOptions} />
                             </div>
                             <div className="flex-1 space-y-3">
                                 {[
-                                    { label: 'Hot', emoji: '🔥', icon: Flame, color: 'text-red-500', bg: 'bg-red-50', count: tempDist.find(t => t.temperature === 'Hot')?.count || 0 },
-                                    { label: 'Warm', emoji: '🌡️', icon: Thermometer, color: 'text-amber-500', bg: 'bg-amber-50', count: tempDist.find(t => t.temperature === 'Warm')?.count || 0 },
-                                    { label: 'Cold', emoji: '❄️', icon: Snowflake, color: 'text-blue-500', bg: 'bg-blue-50', count: tempDist.find(t => t.temperature === 'Cold')?.count || 0 },
+                                    { label: 'Thriving', emoji: '🌿', bg: 'bg-emerald-50', count: garden.thriving },
+                                    { label: 'Growing', emoji: '🌱', bg: 'bg-amber-50', count: garden.growing },
+                                    { label: 'Needs water', emoji: '🥀', bg: 'bg-rose-50', count: garden.wilting },
                                 ].map(item => (
                                     <div key={item.label} className="flex items-center gap-3">
                                         <div className={`w-8 h-8 ${item.bg} rounded-lg flex items-center justify-center`}>

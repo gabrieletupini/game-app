@@ -7,14 +7,12 @@ import {
     Interaction,
     AppSettings,
     FunnelStage,
-    Temperature,
     CreateLeadInput,
     UpdateLeadInput,
     CreateInteractionInput,
     LeadAnalytics,
     FunnelStats,
     OriginDistribution,
-    TemperatureDistribution,
     LoadingState,
     ErrorState,
     ToastMessage
@@ -78,11 +76,6 @@ const DEFAULT_SETTINGS: AppSettings = {
             enabled: false,
             stage3ToStage4Days: 14,
             stage4ToLoverDays: 30
-        },
-        temperatureThresholds: {
-            coldAfterDays: 7,
-            warmMinInteractions: 1,
-            hotMinInteractions: 3
         }
     },
     version: '1.0.0',
@@ -112,6 +105,7 @@ interface GameStore {
     addInteraction: (input: CreateInteractionInput) => void;
     updateInteraction: (id: string, updates: Partial<Interaction>) => void;
     deleteInteraction: (id: string) => void;
+    waterLead: (leadId: string, dateISO?: string) => void;
 
     // Settings Actions
     updateSettings: (updates: Partial<AppSettings>) => void;
@@ -131,7 +125,6 @@ interface GameStore {
     getLeadAnalytics: () => LeadAnalytics;
     getFunnelStats: () => FunnelStats;
     getOriginDistribution: () => OriginDistribution[];
-    getTemperatureDistribution: () => TemperatureDistribution[];
 
     // Utility Actions
     exportData: () => string;
@@ -139,8 +132,6 @@ interface GameStore {
     clearAllData: () => void;
     forceSyncToCloud: () => void;
     resetForReload: () => void;
-    calculateLeadTemperature: (leadId: string) => Temperature;
-    recalculateAllTemperatures: () => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -181,11 +172,6 @@ export const useGameStore = create<GameStore>()(
                 error: { hasError: false }
             });
 
-            // NOTE: Do NOT recalculate temperatures here — it would write stale
-            // localStorage data to Firestore BEFORE the hydration merge, potentially
-            // overwriting newer data from other devices (race condition).
-            // Temperature recalculation happens only AFTER Firestore hydration below.
-
             // Then hydrate from Firestore (async) — Firestore is the SOURCE OF TRUTH.
             // We do NOT merge with localStorage; Firestore always wins.
             // localStorage is just a fast-startup cache, not an authoritative source.
@@ -208,13 +194,8 @@ export const useGameStore = create<GameStore>()(
                     firestoreService.saveLeads(get().leads);
                     firestoreService.saveInteractions(get().interactions);
                 }
-
-                // Recalculate temperatures AFTER hydration (safe: we have the latest data)
-                setTimeout(() => get().recalculateAllTemperatures(), 100);
             }).catch(err => {
                 console.warn('Firestore hydration failed, using localStorage cache:', err);
-                // Firestore unavailable — recalculate with whatever localStorage had
-                setTimeout(() => get().recalculateAllTemperatures(), 100);
             });
 
             // Subscribe to real-time updates from other devices/tabs
@@ -229,37 +210,6 @@ export const useGameStore = create<GameStore>()(
                     settings: data.settings || get().settings,
                 });
             });
-        },
-
-        // Recalculate temperatures for all active leads and snapshot history
-        recalculateAllTemperatures: () => {
-            const leads = get().leads;
-            const now = new Date().toISOString();
-            let changed = false;
-
-            const updatedLeads = leads.map(lead => {
-                if (lead.funnelStage === 'Dead' || lead.funnelStage === 'Lover') return lead;
-
-                const newTemp = get().calculateLeadTemperature(lead.id);
-                if (newTemp === lead.temperature) return lead;
-
-                changed = true;
-                const history = [...(lead.temperatureHistory || [])];
-                // Only record if the temperature actually changed
-                if (history.length === 0 || history[history.length - 1].temperature !== newTemp) {
-                    history.push({ date: now, temperature: newTemp });
-                }
-                // NOTE: Do NOT update `updatedAt` here. Temperature is a derived
-                // computation (time-based decay). Only real user actions should touch
-                // `updatedAt`, otherwise the merge logic on other devices will think
-                // these stale leads are "newer" and pick them over the correct Firestore data.
-                return { ...lead, temperature: newTemp, temperatureHistory: history };
-            });
-
-            if (changed) {
-                set({ leads: updatedLeads });
-                firestoreService.saveLeads(updatedLeads);
-            }
         },
 
         // Lead Actions
@@ -282,8 +232,6 @@ export const useGameStore = create<GameStore>()(
                     funnelStage: input.funnelStage || 'Stage1',
                     originDetails: input.originDetails,
                     instagramUrl: input.instagramUrl,
-                    temperature: 'Hot',
-                    temperatureHistory: [{ date: now, temperature: 'Hot' as Temperature }],
                     stageEnteredAt: now,
                     createdAt: now,
                     updatedAt: now
@@ -416,37 +364,26 @@ export const useGameStore = create<GameStore>()(
                 set({ interactions: updatedInteractions });
                 firestoreService.saveInteractions(updatedInteractions);
 
-                // Build update payload
-                const leadUpdate: UpdateLeadInput = {
-                    lastInteractionDate: input.occurredAt,
-                };
-
-                // If incoming response → reset to Hot + record response date
-                if (input.direction === 'Incoming') {
-                    leadUpdate.lastResponseDate = input.occurredAt;
-                    leadUpdate.temperature = 'Hot';
-                    // Clear manual temperature ref so real response date takes over
-                    leadUpdate.temperatureRefDate = null as any;
-                    const lead = get().getLeadById(input.leadId);
-                    if (lead) {
-                        const history = [...(lead.temperatureHistory || [])];
-                        if (history.length === 0 || history[history.length - 1].temperature !== 'Hot') {
-                            history.push({ date: new Date().toISOString(), temperature: 'Hot' });
-                        }
-                        leadUpdate.temperatureHistory = history;
-                    }
-                } else {
-                    // Outgoing — just recalculate based on current state
-                    leadUpdate.temperature = get().calculateLeadTemperature(input.leadId);
-                }
-
-                get().updateLead(input.leadId, leadUpdate);
+                // Record the most recent time we talked to this connection.
+                get().updateLead(input.leadId, { lastInteractionDate: input.occurredAt });
             } catch (error) {
                 get().setError({
                     hasError: true,
                     message: `Failed to add interaction: ${(error as Error).message}`
                 });
             }
+        },
+
+        // Water a connection — log a quick "talked to them" touch for the given day
+        // (defaults to now). A watering is just an outgoing Message interaction.
+        waterLead: (leadId: string, dateISO?: string) => {
+            get().addInteraction({
+                leadId,
+                type: 'Message',
+                direction: 'Outgoing',
+                notes: '💧 Watered',
+                occurredAt: dateISO || new Date().toISOString(),
+            });
         },
 
         updateInteraction: (id: string, updates: Partial<Interaction>) => {
@@ -597,25 +534,6 @@ export const useGameStore = create<GameStore>()(
             }));
         },
 
-        getTemperatureDistribution: () => {
-            const leads = get().leads.filter(lead => lead.funnelStage !== 'Dead');
-            const total = leads.length;
-
-            if (total === 0) return [];
-
-            const distribution = leads.reduce((acc, lead) => {
-                const temp = lead.temperature;
-                acc[temp] = (acc[temp] || 0) + 1;
-                return acc;
-            }, {} as Record<Temperature, number>);
-
-            return Object.entries(distribution).map(([temperature, count]) => ({
-                temperature: temperature as Temperature,
-                count,
-                percentage: (count / total) * 100
-            }));
-        },
-
         getLeadAnalytics: () => {
             const leads = get().leads;
             const interactions = get().interactions;
@@ -629,7 +547,6 @@ export const useGameStore = create<GameStore>()(
                 activeLeads: activeLeads.length,
                 funnelStats: get().getFunnelStats(),
                 originDistribution: get().getOriginDistribution(),
-                temperatureDistribution: get().getTemperatureDistribution(),
                 averageQualificationScore: activeLeads.length > 0 ?
                     activeLeads.reduce((sum, lead) => {
                         const qual = lead.qualificationScore || 5;
@@ -727,29 +644,6 @@ export const useGameStore = create<GameStore>()(
                     hasError: true,
                     message: `Failed to clear data: ${(error as Error).message}`
                 });
-            }
-        },
-
-        // Helper function for temperature calculation — response-based decay
-        // Hot → Warm after 3 days with no incoming response
-        // Warm → Cold after 7 days with no incoming response
-        // Incoming interaction resets to Hot
-        calculateLeadTemperature: (leadId: string): Temperature => {
-            const lead = get().getLeadById(leadId);
-            if (!lead) return 'Cold';
-
-            // Use temperatureRefDate (manual anchor) first, then lastResponseDate, then fallbacks
-            const referenceDate = lead.temperatureRefDate || lead.lastResponseDate || lead.lastInteractionDate || lead.createdAt;
-            const now = new Date();
-            const refDate = new Date(referenceDate);
-            const daysSince = Math.floor((now.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
-
-            if (daysSince <= 3) {
-                return 'Hot';
-            } else if (daysSince <= 7) {
-                return 'Warm';
-            } else {
-                return 'Cold';
             }
         }
     }))

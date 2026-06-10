@@ -1,6 +1,6 @@
 // Common types and interfaces used throughout the application
 
-import type { PlatformOrigin, Temperature } from './Lead';
+import type { PlatformOrigin } from './Lead';
 import type { InteractionType } from './Interaction';
 
 // Generic API response structure
@@ -49,18 +49,11 @@ export interface OriginDistribution {
     percentage: number;
 }
 
-export interface TemperatureDistribution {
-    temperature: Temperature;
-    count: number;
-    percentage: number;
-}
-
 export interface LeadAnalytics {
     totalLeads: number;
     activeLeads: number; // Not in Dead stage
     funnelStats: FunnelStats;
     originDistribution: OriginDistribution[];
-    temperatureDistribution: TemperatureDistribution[];
     averageQualificationScore: number;
     averageDaysSinceLastInteraction: number;
     thisMonthNewLeads: number;

@@ -42,24 +42,29 @@ export const PLATFORM_ICONS = {
     Other: '📱'
 } as const;
 
-export const TEMPERATURE_CONFIG = {
-    Hot: {
-        icon: '🔥',
-        color: 'text-red-500',
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-500'
+// Plant health stages — a connection is a plant you water 1-3 times a week.
+// See src/utils/gardenHelpers.ts for the logic that maps weekly waterings to a stage.
+export const PLANT_HEALTH = {
+    thriving: {
+        emoji: '🌿',
+        label: 'Thriving',
+        color: 'text-emerald-600',
+        bgColor: 'bg-emerald-50',
+        accent: 'bg-emerald-400'
     },
-    Warm: {
-        icon: '🌡️',
-        color: 'text-orange-500',
-        bgColor: 'bg-orange-50',
-        borderColor: 'border-orange-500'
+    growing: {
+        emoji: '🌱',
+        label: 'Growing',
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50',
+        accent: 'bg-amber-400'
     },
-    Cold: {
-        icon: '❄️',
-        color: 'text-blue-500',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-500'
+    wilting: {
+        emoji: '🥀',
+        label: 'Needs water',
+        color: 'text-rose-600',
+        bgColor: 'bg-rose-50',
+        accent: 'bg-rose-400'
     }
 } as const;
 
@@ -83,15 +88,6 @@ export const INTERACTION_TYPE_ICONS = {
 export const INTERACTION_DIRECTION_ICONS = {
     Incoming: '📥',
     Outgoing: '📤'
-} as const;
-
-// Default thresholds for temperature calculation
-export const TEMPERATURE_THRESHOLDS = {
-    COLD_AFTER_DAYS: 7,
-    WARM_MIN_INTERACTIONS: 1,
-    HOT_MIN_INTERACTIONS: 3,
-    HOT_MAX_DAYS_SINCE_LAST: 2,
-    RECENT_INTERACTION_WINDOW_DAYS: 7
 } as const;
 
 // Personality score display

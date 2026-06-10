@@ -6,36 +6,12 @@ import type { Lead, FunnelStage } from '../types'
 import { PLATFORM_ICONS, INTENTION_CONFIG, FUNNEL_STAGE_NAMES } from '../utils/constants'
 import { getDaysSince } from '../utils/dateHelpers'
 import { useGameStore } from '../store/useGameStore'
-import { getTemperaturePercent } from './TemperatureBoard'
+import { getWaterCountThisWeek, getPlantHealth, WEEKLY_GOAL } from '../utils/gardenHelpers'
 
 interface LeadCardProps {
     lead: Lead
     onClick?: (lead: Lead) => void
     isDragOverlay?: boolean
-}
-
-function getTemperatureClass(temp: string) {
-    switch (temp) {
-        case 'Hot': return 'temp-hot'
-        case 'Warm': return 'temp-warm'
-        default: return 'temp-cold'
-    }
-}
-
-function getTemperatureEmoji(temp: string) {
-    switch (temp) {
-        case 'Hot': return '🔥'
-        case 'Warm': return '🌡️'
-        default: return '❄️'
-    }
-}
-
-function getAccentColor(temp: string) {
-    switch (temp) {
-        case 'Hot': return 'bg-red-400'
-        case 'Warm': return 'bg-amber-400'
-        default: return 'bg-blue-400'
-    }
 }
 
 function ScoreLabel({ score }: { score: number }) {
@@ -55,6 +31,10 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
     const moveLeadToStage = useGameStore(state => state.moveLeadToStage)
     const updateLead = useGameStore(state => state.updateLead)
     const addToast = useGameStore(state => state.addToast)
+    const interactions = useGameStore(state => state.interactions)
+
+    const waterCount = getWaterCountThisWeek(interactions, lead.id)
+    const health = getPlantHealth(waterCount)
 
     const handleToggleStar = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -151,8 +131,8 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
                     ))}
                 </div>
             )}
-            {/* Temperature accent bar */}
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${getAccentColor(lead.temperature)} rounded-l-xl`} />
+            {/* Plant-health accent bar */}
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${health.accentClass} rounded-l-xl`} title={health.label} />
 
             <div className="flex items-start gap-3 pl-2">
                 {/* Star toggle */}
@@ -194,8 +174,11 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
                                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                             </a>
                         )}
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${getTemperatureClass(lead.temperature)}`}>
-                            {getTemperatureEmoji(lead.temperature)} {getTemperaturePercent(lead)}%
+                        <span
+                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${health.bgClass} ${health.textClass}`}
+                            title={`${health.label} — ${waterCount} of ${WEEKLY_GOAL} this week`}
+                        >
+                            {health.emoji} {waterCount}/{WEEKLY_GOAL}
                         </span>
                     </div>
 
@@ -238,6 +221,9 @@ export default function LeadCard({ lead, onClick, isDragOverlay }: LeadCardProps
 // Minimal version for tables
 export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead: Lead) => void }) {
     const updateLead = useGameStore(state => state.updateLead)
+    const interactions = useGameStore(state => state.interactions)
+    const waterCount = getWaterCountThisWeek(interactions, lead.id)
+    const health = getPlantHealth(waterCount)
     const daysSince = lead.lastInteractionDate
         ? getDaysSince(lead.lastInteractionDate)
         : getDaysSince(lead.createdAt)
@@ -273,8 +259,11 @@ export function LeadCardCompact({ lead, onClick }: { lead: Lead; onClick?: (lead
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-slate-900 truncate">{lead.name}</h4>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getTemperatureClass(lead.temperature)}`}>
-                            {getTemperatureEmoji(lead.temperature)} {getTemperaturePercent(lead)}%
+                        <span
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${health.bgClass} ${health.textClass}`}
+                            title={`${health.label} — ${waterCount} of ${WEEKLY_GOAL} this week`}
+                        >
+                            {health.emoji} {waterCount}/{WEEKLY_GOAL}
                         </span>
                     </div>
                     <p className="text-sm text-slate-500 mt-0.5">

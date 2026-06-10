@@ -13,7 +13,7 @@ import LoversTable from './components/LoversTable'
 import DeadLeadsTable from './components/DeadLeadsTable'
 import AnalyticsView from './components/AnalyticsView'
 import PriorityTable from './components/PriorityTable'
-import TemperatureBoard from './components/TemperatureBoard'
+import CalendarView from './components/CalendarView'
 import WeeklyCheckIn, { shouldShowWeeklyCheckIn } from './components/WeeklyCheckIn'
 import ToastContainer from './components/Toast'
 import { exportLeadsToExcel } from './services/excelService'
@@ -106,9 +106,9 @@ function App() {
                     </div>
                 )}
 
-                {activeTab === 'temperature' && (
+                {activeTab === 'calendar' && (
                     <div className="animate-fade-in">
-                        <TemperatureBoard onSelectLead={setSelectedLead} />
+                        <CalendarView onSelectLead={setSelectedLead} />
                     </div>
                 )}
 

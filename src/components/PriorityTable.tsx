@@ -4,7 +4,7 @@ import { useGameStore } from '../store/useGameStore'
 import type { Lead, DatingIntention, FunnelStage, PlatformOrigin } from '../types'
 import { FUNNEL_STAGE_NAMES, PLATFORM_ICONS, INTENTION_CONFIG } from '../utils/constants'
 import { getDaysSince } from '../utils/dateHelpers'
-import { getTemperaturePercent } from './TemperatureBoard'
+import { getWaterCountThisWeek, getPlantHealth, WEEKLY_GOAL } from '../utils/gardenHelpers'
 
 const ALL_INTENTIONS: (DatingIntention | 'All')[] = ['All', 'Short Term', 'Long Term', 'Long Term Open to Short', 'Casual', 'Exploring', 'Undecided']
 
@@ -17,15 +17,21 @@ const QUAL_RANGES: { key: QualRange; label: string; emoji: string; min: number; 
     { key: '8-10', label: 'Elite (8–10)', emoji: '👑', min: 8, max: 10, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
 ]
 
-type TempRange = 'All' | 'hot' | 'warm' | 'cold'
-const TEMP_RANGES: { key: TempRange; label: string; emoji: string; min: number; max: number; color: string; bg: string; border: string }[] = [
-    { key: 'All', label: 'All', emoji: '🌡️', min: 0, max: 100, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-300' },
-    { key: 'hot', label: 'Hot (≥70%)', emoji: '🔥', min: 70, max: 100, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
-    { key: 'warm', label: 'Warm (35–69%)', emoji: '🌡️', min: 35, max: 69, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-    { key: 'cold', label: 'Cold (<35%)', emoji: '❄️', min: 0, max: 34, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+type NurtureRange = 'All' | 'thriving' | 'growing' | 'wilting'
+const NURTURE_RANGES: { key: NurtureRange; label: string; emoji: string; color: string; bg: string; border: string }[] = [
+    { key: 'All', label: 'All', emoji: '🌱', color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-300' },
+    { key: 'thriving', label: `Thriving (≥${WEEKLY_GOAL})`, emoji: '🌿', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+    { key: 'growing', label: `Growing (1–${WEEKLY_GOAL - 1})`, emoji: '🌱', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+    { key: 'wilting', label: 'Needs water (0)', emoji: '🥀', color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
 ]
 
-type SortKey = 'name' | 'overall' | 'qualification' | 'aesthetics' | 'daysSince' | 'stage' | 'intention' | 'platform' | 'commPlatform' | 'temperature'
+function nurtureBucket(count: number): NurtureRange {
+    if (count >= WEEKLY_GOAL) return 'thriving'
+    if (count >= 1) return 'growing'
+    return 'wilting'
+}
+
+type SortKey = 'name' | 'overall' | 'qualification' | 'aesthetics' | 'daysSince' | 'stage' | 'intention' | 'platform' | 'commPlatform' | 'nurture'
 type SortDir = 'asc' | 'desc'
 
 interface PriorityTableProps {
@@ -35,15 +41,23 @@ interface PriorityTableProps {
 export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
     const leads = useGameStore(state => state.leads)
     const updateLead = useGameStore(state => state.updateLead)
+    const interactions = useGameStore(state => state.interactions)
 
     // Only show active funnel leads (not Lover/Dead)
     const activeLeads = leads.filter(l =>
         l.funnelStage !== 'Lover' && l.funnelStage !== 'Dead'
     )
 
+    // This week's watering count per connection
+    const waterCounts = useMemo(() => {
+        const map: Record<string, number> = {}
+        activeLeads.forEach(l => { map[l.id] = getWaterCountThisWeek(interactions, l.id) })
+        return map
+    }, [activeLeads, interactions])
+
     const [intentionFilter, setIntentionFilter] = useState<DatingIntention | 'All'>('All')
     const [qualFilter, setQualFilter] = useState<QualRange>('All')
-    const [tempFilter, setTempFilter] = useState<TempRange>('All')
+    const [nurtureFilter, setNurtureFilter] = useState<NurtureRange>('All')
     const [platformFilter, setPlatformFilter] = useState<PlatformOrigin | 'All'>('All')
     const [stageFilter, setStageFilter] = useState<FunnelStage | 'All'>('All')
     const [countryFilter, setCountryFilter] = useState<string>('All')
@@ -94,7 +108,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
         }
     }
 
-    const activeFilters = (intentionFilter !== 'All' ? 1 : 0) + (qualFilter !== 'All' ? 1 : 0) + (tempFilter !== 'All' ? 1 : 0) + (platformFilter !== 'All' ? 1 : 0) + (stageFilter !== 'All' ? 1 : 0) + (countryFilter !== 'All' ? 1 : 0) + (traitFilter !== 'All' ? 1 : 0) + (search.trim() ? 1 : 0)
+    const activeFilters = (intentionFilter !== 'All' ? 1 : 0) + (qualFilter !== 'All' ? 1 : 0) + (nurtureFilter !== 'All' ? 1 : 0) + (platformFilter !== 'All' ? 1 : 0) + (stageFilter !== 'All' ? 1 : 0) + (countryFilter !== 'All' ? 1 : 0) + (traitFilter !== 'All' ? 1 : 0) + (search.trim() ? 1 : 0)
 
     const filteredAndSorted = useMemo(() => {
         let result = activeLeads
@@ -125,15 +139,9 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
             result = result.filter(l => l.funnelStage === stageFilter)
         }
 
-        // Filter by temperature range
-        if (tempFilter !== 'All') {
-            const range = TEMP_RANGES.find(r => r.key === tempFilter)
-            if (range) {
-                result = result.filter(l => {
-                    const pct = getTemperaturePercent(l)
-                    return pct >= range.min && pct <= range.max
-                })
-            }
+        // Filter by nurture bucket (this week's waterings)
+        if (nurtureFilter !== 'All') {
+            result = result.filter(l => nurtureBucket(waterCounts[l.id] || 0) === nurtureFilter)
         }
 
         // Filter by country
@@ -193,15 +201,15 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                     return dir * a.platformOrigin.localeCompare(b.platformOrigin)
                 case 'commPlatform':
                     return dir * ((a.communicationPlatform?.[0] || a.platformOrigin).localeCompare(b.communicationPlatform?.[0] || b.platformOrigin))
-                case 'temperature':
-                    return dir * (getTemperaturePercent(a) - getTemperaturePercent(b))
+                case 'nurture':
+                    return dir * ((waterCounts[a.id] || 0) - (waterCounts[b.id] || 0))
                 default:
                     return 0
             }
         })
 
         return result
-    }, [activeLeads, intentionFilter, qualFilter, tempFilter, platformFilter, stageFilter, countryFilter, traitFilter, search, sortKey, sortDir])
+    }, [activeLeads, intentionFilter, qualFilter, nurtureFilter, platformFilter, stageFilter, countryFilter, traitFilter, search, sortKey, sortDir, waterCounts])
 
     if (activeLeads.length === 0) return null
 
@@ -230,12 +238,12 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                         <Filter className="w-5 h-5 text-brand-500" />
                         Lead Board
                     </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">Filter by stage, origin, intention, temperature &amp; more • Sort by any column • Click a row to open</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Filter by stage, origin, intention, nurture &amp; more • Sort by any column • Click a row to open</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {activeFilters > 0 && (
                         <button
-                            onClick={() => { setIntentionFilter('All'); setQualFilter('All'); setTempFilter('All'); setPlatformFilter('All'); setStageFilter('All'); setCountryFilter('All'); setTraitFilter('All'); setSearch('') }}
+                            onClick={() => { setIntentionFilter('All'); setQualFilter('All'); setNurtureFilter('All'); setPlatformFilter('All'); setStageFilter('All'); setCountryFilter('All'); setTraitFilter('All'); setSearch('') }}
                             className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition"
                         >
                             ✕ Clear {activeFilters} filter{activeFilters > 1 ? 's' : ''}
@@ -324,24 +332,21 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                 {/* Divider */}
                 <div className="border-t border-slate-100" />
 
-                {/* Row 3: Temperature range filter */}
+                {/* Row 3: Nurture filter (this week's waterings) */}
                 <div>
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">🌡️ Temperature Range</p>
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">💧 This Week's Nurture</p>
                     <div className="flex flex-wrap items-center gap-2">
-                        {TEMP_RANGES.map(range => {
-                            const isActive = tempFilter === range.key
+                        {NURTURE_RANGES.map(range => {
+                            const isActive = nurtureFilter === range.key
                             const isAll = range.key === 'All'
                             const count = isAll
                                 ? activeLeads.length
-                                : activeLeads.filter(l => {
-                                    const pct = getTemperaturePercent(l)
-                                    return pct >= range.min && pct <= range.max
-                                }).length
+                                : activeLeads.filter(l => nurtureBucket(waterCounts[l.id] || 0) === range.key).length
 
                             return (
                                 <button
                                     key={range.key}
-                                    onClick={() => setTempFilter(range.key)}
+                                    onClick={() => setNurtureFilter(range.key)}
                                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-2 ${isActive
                                         ? isAll
                                             ? 'border-brand-500 bg-brand-50 text-brand-700'
@@ -526,7 +531,7 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                 <SortHeader label="🧠 Pers" sortKeyName="qualification" />
                                 <SortHeader label="✨ Aesth" sortKeyName="aesthetics" />
                                 <SortHeader label="Stage" sortKeyName="stage" />
-                                <SortHeader label="🌡️ Temp" sortKeyName="temperature" />
+                                <SortHeader label="💧 This Wk" sortKeyName="nurture" />
                                 <SortHeader label="📍 Origin" sortKeyName="platform" />
                                 <SortHeader label="💬 Talking On" sortKeyName="commPlatform" />
                                 <SortHeader label="Last Contact" sortKeyName="daysSince" />
@@ -605,12 +610,11 @@ export default function PriorityTable({ onSelectLead }: PriorityTableProps) {
                                             </td>
                                             <td className="px-3 py-3">
                                                 {(() => {
-                                                    const pct = getTemperaturePercent(lead)
-                                                    const color = pct >= 70 ? 'text-red-500' : pct >= 35 ? 'text-amber-500' : 'text-blue-500'
-                                                    const emoji = pct >= 70 ? '🔥' : pct >= 35 ? '🌡️' : '❄️'
+                                                    const count = waterCounts[lead.id] || 0
+                                                    const health = getPlantHealth(count)
                                                     return (
-                                                        <span className={`text-xs font-bold ${color}`}>
-                                                            {emoji} {pct}%
+                                                        <span className={`text-xs font-bold ${health.textClass}`} title={health.label}>
+                                                            {health.emoji} {count}/{WEEKLY_GOAL}
                                                         </span>
                                                     )
                                                 })()}

@@ -19,10 +19,10 @@ import {
     ZoomIn,
 } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
-import TemperatureTimeline from './TemperatureTimeline'
 import type { Lead, FunnelStage, DatingIntention, InteractionType, InteractionDirection, PlatformOrigin } from '../types'
 import { PLATFORM_ICONS, FUNNEL_STAGE_NAMES, INTENTION_CONFIG } from '../utils/constants'
 import { getDaysSince, formatDate } from '../utils/dateHelpers'
+import { getWaterCountThisWeek, getPlantHealth, WEEKLY_GOAL } from '../utils/gardenHelpers'
 
 interface LeadDetailModalProps {
     lead: Lead
@@ -47,6 +47,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
         deleteLead,
         moveLeadToStage,
         addInteraction,
+        waterLead,
         getInteractionsByLeadId,
         addToast,
     } = useGameStore()
@@ -179,8 +180,8 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
 
     const platformIcon = PLATFORM_ICONS[lead.platformOrigin] || '📱'
     const commPlatforms = lead.communicationPlatform?.length ? lead.communicationPlatform : [lead.platformOrigin]
-    const tempEmoji = lead.temperature === 'Hot' ? '🔥' : lead.temperature === 'Warm' ? '🌡️' : '❄️'
-    const tempClass = lead.temperature === 'Hot' ? 'temp-hot' : lead.temperature === 'Warm' ? 'temp-warm' : 'temp-cold'
+    const waterCount = getWaterCountThisWeek(allInteractions, lead.id)
+    const health = getPlantHealth(waterCount)
 
     return (
         <Dialog open={true} onClose={onClose} className="relative z-50">
@@ -227,8 +228,8 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2 mt-2">
-                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tempClass}`}>
-                                        {tempEmoji} {lead.temperature}
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${health.bgClass} ${health.textClass}`} title={health.label}>
+                                        {health.emoji} {waterCount}/{WEEKLY_GOAL} this week
                                     </span>
                                     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-brand-50 text-brand-700">
                                         Score: {(((lead.qualificationScore || 5) + (lead.aestheticsScore || 5)) / 2).toFixed(1)}/10
@@ -659,9 +660,25 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                                             </div>
                                         )}
 
-                                        {/* Temperature Timeline & Messaging */}
-                                        <div className="bg-slate-50 rounded-xl p-4">
-                                            <TemperatureTimeline lead={lead} interactions={allInteractions} compact />
+                                        {/* This week's nurture */}
+                                        <div className={`rounded-xl p-4 flex items-center justify-between gap-3 ${health.bgClass}`}>
+                                            <div>
+                                                <p className={`text-sm font-bold ${health.textClass}`}>
+                                                    {health.emoji} {health.label}
+                                                </p>
+                                                <p className="text-xs text-slate-500 mt-0.5">
+                                                    Talked {waterCount} of {WEEKLY_GOAL} times this week
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    waterLead(lead.id)
+                                                    addToast({ type: 'success', title: `💧 Watered ${lead.name}`, duration: 2000 })
+                                                }}
+                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:text-emerald-700 transition shadow-sm"
+                                            >
+                                                💧 Water today
+                                            </button>
                                         </div>
 
                                         {/* Actions */}

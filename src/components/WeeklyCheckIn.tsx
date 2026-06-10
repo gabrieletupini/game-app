@@ -4,6 +4,7 @@ import { CheckCircle, XCircle, MessageCircle, X } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import { PLATFORM_ICONS } from '../utils/constants'
 import { getDaysSince } from '../utils/dateHelpers'
+import { getWaterCountThisWeek, getPlantHealth } from '../utils/gardenHelpers'
 
 interface WeeklyCheckInProps {
     isOpen: boolean
@@ -12,19 +13,16 @@ interface WeeklyCheckInProps {
 
 export default function WeeklyCheckIn({ isOpen, onClose }: WeeklyCheckInProps) {
     const leads = useGameStore(state => state.leads)
+    const interactions = useGameStore(state => state.interactions)
     const addInteraction = useGameStore(state => state.addInteraction)
     const addToast = useGameStore(state => state.addToast)
 
-    // Active leads that are not Dead or Lover
+    // Active leads that are not Dead or Lover — least-nurtured first (most needing attention)
     const activeLeads = useMemo(
         () => leads
             .filter(l => l.funnelStage !== 'Dead' && l.funnelStage !== 'Lover')
-            .sort((a, b) => {
-                // Sort: coldest first (most needing attention)
-                const tempOrder = { Cold: 0, Warm: 1, Hot: 2 }
-                return tempOrder[a.temperature] - tempOrder[b.temperature]
-            }),
-        [leads]
+            .sort((a, b) => getWaterCountThisWeek(interactions, a.id) - getWaterCountThisWeek(interactions, b.id)),
+        [leads, interactions]
     )
 
     // Track which leads the user has already answered
@@ -58,7 +56,7 @@ export default function WeeklyCheckIn({ isOpen, onClose }: WeeklyCheckInProps) {
         addToast({
             type: 'success',
             title: '📋 Weekly Check-In Complete',
-            message: `${yesCount} responded, ${noCount} silent. Temperatures updated!`,
+            message: `${yesCount} talked to, ${noCount} still need water 💧`,
             duration: 4000,
         })
         onClose()
@@ -79,7 +77,7 @@ export default function WeeklyCheckIn({ isOpen, onClose }: WeeklyCheckInProps) {
                                     📋 Weekly Check-In
                                 </h2>
                                 <p className="text-xs text-slate-500 mt-1">
-                                    Did your leads respond this week? This updates their temperature.
+                                    Who did you talk to this week? Keep every connection watered 💧
                                 </p>
                             </div>
                             <button
@@ -113,12 +111,11 @@ export default function WeeklyCheckIn({ isOpen, onClose }: WeeklyCheckInProps) {
                             <div className="space-y-2">
                                 {activeLeads.map(lead => {
                                     const answer = responded[lead.id]
-                                    const daysSince = lead.lastResponseDate
-                                        ? getDaysSince(lead.lastResponseDate)
-                                        : lead.lastInteractionDate
-                                            ? getDaysSince(lead.lastInteractionDate)
-                                            : getDaysSince(lead.createdAt)
-                                    const tempEmoji = lead.temperature === 'Hot' ? '🔥' : lead.temperature === 'Warm' ? '🌡️' : '❄️'
+                                    const daysSince = lead.lastInteractionDate
+                                        ? getDaysSince(lead.lastInteractionDate)
+                                        : getDaysSince(lead.createdAt)
+                                    const waterCount = getWaterCountThisWeek(interactions, lead.id)
+                                    const health = getPlantHealth(waterCount)
 
                                     return (
                                         <div
@@ -147,7 +144,7 @@ export default function WeeklyCheckIn({ isOpen, onClose }: WeeklyCheckInProps) {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-sm font-semibold text-slate-800 truncate">{lead.name}</span>
-                                                    <span className="text-xs">{tempEmoji}</span>
+                                                    <span className="text-xs" title={health.label}>{health.emoji} {waterCount}/3</span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 mt-0.5">
                                                     <span className="text-[11px] text-slate-400">
@@ -155,7 +152,7 @@ export default function WeeklyCheckIn({ isOpen, onClose }: WeeklyCheckInProps) {
                                                     </span>
                                                     <span className="text-[11px] text-slate-300">•</span>
                                                     <span className={`text-[11px] font-medium ${daysSince > 7 ? 'text-red-500' : daysSince > 3 ? 'text-amber-500' : 'text-slate-400'}`}>
-                                                        {daysSince === 0 ? 'Today' : `${daysSince}d since last response`}
+                                                        {daysSince === 0 ? 'Today' : `${daysSince}d since last talk`}
                                                     </span>
                                                 </div>
                                             </div>

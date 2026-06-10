@@ -75,7 +75,6 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
             'Dating Intention': lead.datingIntention || 'Undecided',
             'Funnel Stage': FUNNEL_STAGE_NAMES[lead.funnelStage] || lead.funnelStage,
             'Origin / How We Met': lead.originDetails || '',
-            'Temperature': lead.temperature,
             'Days Since Last Spoken': daysSince,
             'Last Interaction Date': lead.lastInteractionDate
                 ? new Date(lead.lastInteractionDate).toLocaleDateString()
@@ -102,7 +101,6 @@ export function exportLeadsToExcel(leads: Lead[], filename?: string) {
         { wch: 16 },  // Dating Intention
         { wch: 24 },  // Stage
         { wch: 30 },  // Origin
-        { wch: 12 },  // Temperature
         { wch: 12 },  // Days since
         { wch: 16 },  // Last interaction
         { wch: 14 },  // Created
