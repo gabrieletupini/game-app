@@ -1,4 +1,4 @@
-import { Plus, LayoutGrid, Heart as HeartIcon, Snowflake, BarChart3, CalendarDays, Menu, X, Upload, Download, ClipboardCheck, LogOut } from 'lucide-react'
+import { Plus, LayoutGrid, Heart as HeartIcon, Snowflake, BarChart3, Sprout, Menu, X, Upload, Download, ClipboardCheck, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import { useAuth } from '../contexts/AuthContext'
@@ -57,7 +57,7 @@ function SyncIndicator() {
     )
 }
 
-export type Tab = 'funnel' | 'calendar' | 'lovers' | 'dead' | 'analytics'
+export type Tab = 'funnel' | 'connections' | 'lovers' | 'dead' | 'analytics'
 
 interface HeaderProps {
     activeTab: Tab
@@ -70,7 +70,7 @@ interface HeaderProps {
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'funnel', label: 'Funnel', icon: LayoutGrid },
-    { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+    { id: 'connections', label: 'Connections', icon: Sprout },
     { id: 'lovers', label: 'Lovers', icon: HeartIcon },
     { id: 'dead', label: 'Cold Leads', icon: Snowflake },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },

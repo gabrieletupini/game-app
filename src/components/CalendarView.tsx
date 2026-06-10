@@ -14,7 +14,7 @@ import {
     format,
     parseISO,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Droplets, Check, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, Plus } from 'lucide-react'
 import { useGameStore } from '../store/useGameStore'
 import type { Lead } from '../types'
 import { getStartOfDay } from '../utils/dateHelpers'
@@ -27,7 +27,7 @@ interface CalendarViewProps {
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function Avatar({ lead, size = 'sm', planned = false }: { lead: Lead; size?: 'xs' | 'sm' | 'md'; planned?: boolean }) {
-    const dim = size === 'md' ? 'w-9 h-9 text-sm' : size === 'sm' ? 'w-7 h-7 text-xs' : 'w-5 h-5 text-[9px]'
+    const dim = size === 'md' ? 'w-10 h-10 text-sm' : size === 'sm' ? 'w-7 h-7 text-xs' : 'w-5 h-5 text-[9px]'
     const ring = planned ? 'ring-1 ring-dashed ring-slate-400 opacity-70' : 'ring-2 ring-white'
     return lead.profilePhotoUrl ? (
         <img src={lead.profilePhotoUrl} alt={lead.name} className={`${dim} rounded-full object-cover ${ring} shadow-sm`} />
@@ -48,22 +48,23 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
     const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(new Date()))
     const [selectedDay, setSelectedDay] = useState<Date | null>(() => getStartOfDay(new Date()))
 
-    const leadById = useMemo(() => {
-        const map = new Map<string, Lead>()
-        leads.forEach(l => map.set(l.id, l))
-        return map
-    }, [leads])
-
-    // Active connections (not archived / not lovers) — the ones we're building
-    const activeLeads = useMemo(
-        () => leads.filter(l => l.funnelStage !== 'Dead' && l.funnelStage !== 'Lover'),
+    // Connections = girls who already passed through the funnel and became Lovers.
+    // These are the plants you irrigate 1-3x/week. Leads-in-the-making stay on the Kanban.
+    const connections = useMemo(
+        () => leads.filter(l => l.funnelStage === 'Lover'),
         [leads]
     )
+    const connectionById = useMemo(() => {
+        const map = new Map<string, Lead>()
+        connections.forEach(l => map.set(l.id, l))
+        return map
+    }, [connections])
 
-    // Map each day (toDateString) -> { leadId -> count } from logged interactions
+    // Map each day (toDateString) -> { leadId -> count } for connection interactions only
     const dayMap = useMemo(() => {
         const map = new Map<string, Map<string, number>>()
         interactions.forEach(i => {
+            if (!connectionById.has(i.leadId)) return
             const d = parseISO(i.occurredAt)
             if (isNaN(d.getTime())) return
             const key = d.toDateString()
@@ -72,7 +73,7 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
             inner.set(i.leadId, (inner.get(i.leadId) || 0) + 1)
         })
         return map
-    }, [interactions])
+    }, [interactions, connectionById])
 
     const calendarDays = useMemo(() => {
         const gridStart = startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 })
@@ -82,18 +83,16 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
 
     const today = getStartOfDay(new Date())
 
-    // Connections talked to on a given day (deduped), with whether it's planned (future)
     const leadsForDay = (day: Date) => {
         const inner = dayMap.get(day.toDateString())
         if (!inner) return [] as Lead[]
         return Array.from(inner.keys())
-            .map(id => leadById.get(id))
+            .map(id => connectionById.get(id))
             .filter((l): l is Lead => Boolean(l))
     }
 
-    const hasWatering = (day: Date, leadId: string) => {
-        return (dayMap.get(day.toDateString())?.get(leadId) || 0) > 0
-    }
+    const hasWatering = (day: Date, leadId: string) =>
+        (dayMap.get(day.toDateString())?.get(leadId) || 0) > 0
 
     const removeWateringsOnDay = (day: Date, leadId: string) => {
         interactions
@@ -102,8 +101,8 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
     }
 
     const waterOnDay = (day: Date, lead: Lead) => {
-        // Keep the time-of-day so multiple waterings on the same day stay distinct,
-        // but anchor the date to the selected day.
+        // Anchor the date to the selected day but keep the current time so multiple
+        // waterings on the same day stay distinct records.
         const now = new Date()
         const stamp = new Date(day)
         stamp.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds())
@@ -116,16 +115,58 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
         })
     }
 
-    // Garden strip — least-nurtured first so neglected connections rise to the top
-    const garden = useMemo(() => {
-        return activeLeads
+    // Connections board — least-watered first so neglected ones rise to the top
+    const garden = useMemo(
+        () => connections
             .map(l => ({ lead: l, count: getWaterCountThisWeek(interactions, l.id) }))
-            .sort((a, b) => a.count - b.count || a.lead.name.localeCompare(b.lead.name))
-    }, [activeLeads, interactions])
+            .sort((a, b) => a.count - b.count || a.lead.name.localeCompare(b.lead.name)),
+        [connections, interactions]
+    )
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-            {/* Calendar */}
+        <div className="space-y-6">
+            {/* ===== Connections board (top) ===== */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">🌿 Your Connections</h2>
+                    <span className="text-xs text-slate-400">{connections.length} lover{connections.length !== 1 ? 's' : ''}</span>
+                </div>
+                <p className="text-xs text-slate-400 mb-4">Water each connection {WEEKLY_GOAL}× this week. Everyday better 🌱</p>
+
+                {garden.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-slate-400">
+                        No connections yet. Once a girl passes through the funnel and becomes a <span className="font-semibold text-slate-500">Lover</span>, she'll appear here to be watered.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {garden.map(({ lead, count }) => {
+                            const health = getPlantHealth(count)
+                            return (
+                                <div key={lead.id} className={`flex items-center gap-3 p-3 rounded-xl ${health.bgClass}`}>
+                                    <button onClick={() => onSelectLead(lead)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                                        <Avatar lead={lead} size="md" />
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-slate-800 truncate">{lead.name}</p>
+                                            <p className={`text-xs font-medium ${health.textClass}`}>
+                                                {health.emoji} {count}/{WEEKLY_GOAL} this week
+                                            </p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => { waterLead(lead.id); addToast({ type: 'success', title: `💧 Watered ${lead.name}`, duration: 1800 }) }}
+                                        className="flex-shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-semibold text-slate-600 hover:border-sky-300 hover:text-sky-700 transition shadow-sm"
+                                        title="Log a chat today"
+                                    >
+                                        💧 Water
+                                    </button>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* ===== Calendar (bottom) ===== */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
                 {/* Month nav */}
                 <div className="flex items-center justify-between mb-4">
@@ -174,7 +215,7 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
                             <button
                                 key={day.toISOString()}
                                 onClick={() => setSelectedDay(getStartOfDay(day))}
-                                className={`min-h-[64px] sm:min-h-[84px] rounded-lg border p-1.5 text-left transition flex flex-col gap-1
+                                className={`min-h-[64px] sm:min-h-[88px] rounded-lg border p-1.5 text-left transition flex flex-col gap-1
                                     ${inMonth ? 'bg-white' : 'bg-slate-50/60'}
                                     ${isSelected ? 'border-brand-400 ring-2 ring-brand-200' : 'border-slate-100 hover:border-slate-300'}
                                 `}
@@ -199,17 +240,15 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
                 {/* Selected-day panel */}
                 {selectedDay && (
                     <div className="mt-5 border-t border-slate-100 pt-4">
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-sm font-bold text-slate-900">
-                                {isBefore(today, selectedDay) ? '🗓️ Plan to talk on ' : '💧 Talked to on '}
-                                {format(selectedDay, 'EEE, MMM d')}
-                            </h3>
-                        </div>
-                        {activeLeads.length === 0 ? (
-                            <p className="text-sm text-slate-400 py-4 text-center">Add connections from the Funnel first.</p>
+                        <h3 className="text-sm font-bold text-slate-900 mb-3">
+                            {isBefore(today, selectedDay) ? '🗓️ Plan to talk on ' : '💧 Talked to on '}
+                            {format(selectedDay, 'EEE, MMM d')}
+                        </h3>
+                        {connections.length === 0 ? (
+                            <p className="text-sm text-slate-400 py-4 text-center">No connections yet — promote a Lover from the funnel.</p>
                         ) : (
                             <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                                {activeLeads.map(lead => {
+                                {connections.map(lead => {
                                     const done = hasWatering(selectedDay, lead.id)
                                     return (
                                         <div
@@ -241,45 +280,6 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
                                 })}
                             </div>
                         )}
-                    </div>
-                )}
-            </div>
-
-            {/* Garden strip */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 h-fit">
-                <div className="flex items-center gap-2 mb-1">
-                    <Droplets className="w-4 h-4 text-sky-500" />
-                    <h3 className="text-sm font-bold text-slate-900">Your Garden</h3>
-                </div>
-                <p className="text-xs text-slate-400 mb-4">Water each connection {WEEKLY_GOAL}× this week. Everyday better 🌱</p>
-
-                {garden.length === 0 ? (
-                    <p className="text-sm text-slate-400 py-4 text-center">No active connections yet.</p>
-                ) : (
-                    <div className="space-y-1.5">
-                        {garden.map(({ lead, count }) => {
-                            const health = getPlantHealth(count)
-                            return (
-                                <div key={lead.id} className={`flex items-center gap-2.5 p-2 rounded-xl ${health.bgClass}`}>
-                                    <button onClick={() => onSelectLead(lead)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
-                                        <Avatar lead={lead} size="sm" />
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-medium text-slate-800 truncate">{lead.name}</p>
-                                            <p className={`text-[11px] font-medium ${health.textClass}`}>
-                                                {health.emoji} {count}/{WEEKLY_GOAL} this week
-                                            </p>
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => { waterLead(lead.id); addToast({ type: 'success', title: `💧 Watered ${lead.name}`, duration: 1800 }) }}
-                                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-600 hover:border-sky-300 hover:text-sky-700 transition shadow-sm"
-                                        title="Log a chat today"
-                                    >
-                                        💧
-                                    </button>
-                                </div>
-                            )
-                        })}
                     </div>
                 )}
             </div>

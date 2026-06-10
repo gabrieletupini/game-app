@@ -106,7 +106,7 @@ function App() {
                     </div>
                 )}
 
-                {activeTab === 'calendar' && (
+                {activeTab === 'connections' && (
                     <div className="animate-fade-in">
                         <CalendarView onSelectLead={setSelectedLead} />
                     </div>
