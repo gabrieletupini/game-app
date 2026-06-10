@@ -1,4 +1,4 @@
-import { Plus, LayoutGrid, Heart as HeartIcon, Snowflake, BarChart3, Sprout, Menu, X, Upload, Download, ClipboardCheck, LogOut } from 'lucide-react'
+import { Plus, LayoutGrid, Heart as HeartIcon, Snowflake, BarChart3, Sprout, Menu, X, Upload, Download, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import { useAuth } from '../contexts/AuthContext'
@@ -65,7 +65,6 @@ interface HeaderProps {
     onAddLead: () => void
     onBulkUpload: () => void
     onExport: () => void
-    onCheckIn: () => void
 }
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -76,7 +75,7 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ]
 
-export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload, onExport, onCheckIn }: HeaderProps) {
+export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload, onExport }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const { logout, user } = useAuth()
 
@@ -128,13 +127,6 @@ export default function Header({ activeTab, onTabChange, onAddLead, onBulkUpload
                         >
                             <LogOut className="w-4 h-4" />
                             <span className="text-xs font-medium hidden sm:inline">Logout</span>
-                        </button>
-                        <button
-                            onClick={onCheckIn}
-                            title="Weekly check-in"
-                            className="p-2.5 text-slate-500 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition hidden sm:flex items-center justify-center"
-                        >
-                            <ClipboardCheck className="w-4 h-4" />
                         </button>
                         <button
                             onClick={onExport}
