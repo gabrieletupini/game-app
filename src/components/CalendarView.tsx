@@ -11,6 +11,8 @@ import {
     isBefore,
     addMonths,
     subMonths,
+    subDays,
+    addDays,
     format,
     parseISO,
 } from 'date-fns'
@@ -82,6 +84,13 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
     }, [viewMonth])
 
     const today = getStartOfDay(new Date())
+
+    // Select a day and make sure the calendar is showing the month it lives in
+    const selectDay = (d: Date) => {
+        const start = getStartOfDay(d)
+        setSelectedDay(start)
+        setViewMonth(startOfMonth(start))
+    }
 
     const leadsForDay = (day: Date) => {
         const inner = dayMap.get(day.toDateString())
@@ -215,6 +224,7 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
                             <button
                                 key={day.toISOString()}
                                 onClick={() => setSelectedDay(getStartOfDay(day))}
+                                type="button"
                                 className={`min-h-[64px] sm:min-h-[88px] rounded-lg border p-1.5 text-left transition flex flex-col gap-1
                                     ${inMonth ? 'bg-white' : 'bg-slate-50/60'}
                                     ${isSelected ? 'border-brand-400 ring-2 ring-brand-200' : 'border-slate-100 hover:border-slate-300'}
@@ -240,10 +250,51 @@ export default function CalendarView({ onSelectLead }: CalendarViewProps) {
                 {/* Selected-day panel */}
                 {selectedDay && (
                     <div className="mt-5 border-t border-slate-100 pt-4">
-                        <h3 className="text-sm font-bold text-slate-900 mb-3">
-                            {isBefore(today, selectedDay) ? '🗓️ Plan to talk on ' : '💧 Talked to on '}
-                            {format(selectedDay, 'EEE, MMM d')}
-                        </h3>
+                        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                            <h3 className="text-sm font-bold text-slate-900">
+                                {isBefore(today, selectedDay) ? '🗓️ Plan to talk on ' : '💧 Talked to on '}
+                                {isSameDay(selectedDay, today) ? 'today' : format(selectedDay, 'EEE, MMM d')}
+                            </h3>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => selectDay(subDays(selectedDay, 1))}
+                                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition"
+                                    title="Previous day"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => selectDay(new Date())}
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition ${isSameDay(selectedDay, today) ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                                >
+                                    Today
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => selectDay(subDays(new Date(), 1))}
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition ${isSameDay(selectedDay, subDays(today, 1)) ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                                >
+                                    Yesterday
+                                </button>
+                                <input
+                                    type="date"
+                                    value={format(selectedDay, 'yyyy-MM-dd')}
+                                    onChange={e => { if (e.target.value) selectDay(parseISO(e.target.value)) }}
+                                    className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                                    title="Pick any day"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => selectDay(addDays(selectedDay, 1))}
+                                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition"
+                                    title="Next day"
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
                         {connections.length === 0 ? (
                             <p className="text-sm text-slate-400 py-4 text-center">No connections yet — promote a Lover from the funnel.</p>
                         ) : (
